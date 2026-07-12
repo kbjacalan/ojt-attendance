@@ -17,6 +17,7 @@ import {
   correctAttendance,
 } from "../../services/inchargeApi";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
 
 function to12HourNoSuffix(time24) {
@@ -109,7 +110,7 @@ export default function StudentDTRReview() {
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 px-4 print:p-0">
-      <div className="max-w-3xl mx-auto mb-4 flex items-center justify-between print:hidden">
+      <div className="max-w-3xl mx-auto mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <Link
           to="/incharge/records"
           className="text-sm text-slate-500 hover:text-slate-800"
@@ -117,48 +118,52 @@ export default function StudentDTRReview() {
           ← Back to Students
         </Link>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => shiftMonth(-1)}
-            className="p-1.5 rounded hover:bg-slate-200"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-sm font-medium text-slate-700 min-w-[110px] text-center">
-            {dtr?.student?.month || month}
-          </span>
-          <button
-            onClick={() => shiftMonth(1)}
-            className="p-1.5 rounded hover:bg-slate-200"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => window.print()}
-            disabled={!dtr}
-            className="ml-3 flex items-center gap-2 bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue disabled:opacity-50"
-          >
-            <Printer className="w-4 h-4" /> Print
-          </button>
-
-          {isCertified ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex items-center justify-center gap-1">
             <button
-              onClick={() => setShowUncertifyConfirm(true)}
-              className="flex items-center gap-2 bg-white border border-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50"
+              onClick={() => shiftMonth(-1)}
+              className="p-1.5 rounded hover:bg-slate-200"
             >
-              <XCircle className="w-4 h-4" /> Uncertify
+              <ChevronLeft className="w-4 h-4" />
             </button>
-          ) : (
+            <span className="text-sm font-medium text-slate-700 min-w-[90px] sm:min-w-[110px] text-center">
+              {dtr?.student?.month || month}
+            </span>
             <button
-              onClick={() => setShowCertifyConfirm(true)}
-              disabled={!dtr || certifying}
-              className="flex items-center gap-2 bg-caap-gold text-caap-navy px-4 py-2 rounded-lg text-sm font-semibold hover:brightness-95 disabled:opacity-50"
+              onClick={() => shiftMonth(1)}
+              className="p-1.5 rounded hover:bg-slate-200"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              {certifying ? "Certifying…" : "Certify"}
+              <ChevronRight className="w-4 h-4" />
             </button>
-          )}
+          </div>
+
+          <div className="flex items-center gap-2 sm:ml-3">
+            <button
+              onClick={() => window.print()}
+              disabled={!dtr}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-caap-navy text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue disabled:opacity-50"
+            >
+              <Printer className="w-4 h-4" /> Print
+            </button>
+
+            {isCertified ? (
+              <button
+                onClick={() => setShowUncertifyConfirm(true)}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-white border border-slate-300 text-slate-700 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-50"
+              >
+                <XCircle className="w-4 h-4" /> Uncertify
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowCertifyConfirm(true)}
+                disabled={!dtr || certifying}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-caap-gold text-caap-navy px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold hover:brightness-95 disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                {certifying ? "Certifying…" : "Certify"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -175,153 +180,155 @@ export default function StudentDTRReview() {
       )}
 
       {!loading && dtr && (
-        <div className="max-w-3xl mx-auto bg-white shadow-sm border border-slate-200 rounded-lg p-8 print:p-0 print:shadow-none print:border-none">
-          {isCertified && (
-            <div className="mb-4 flex items-center gap-2 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2 print:hidden">
-              <CheckCircle2 className="w-4 h-4" />
-              Certified on{" "}
-              {new Date(dtr.certification.certified_at).toLocaleString(
-                "en-PH",
-                { timeZone: "Asia/Manila" },
-              )}
-            </div>
-          )}
+        <ResponsiveDocument className="max-w-3xl mx-auto">
+          <div className="bg-white shadow-sm border border-slate-200 rounded-lg p-8 print:p-0 print:shadow-none print:border-none">
+            {isCertified && (
+              <div className="mb-4 flex items-center gap-2 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2 print:hidden">
+                <CheckCircle2 className="w-4 h-4" />
+                Certified on{" "}
+                {new Date(dtr.certification.certified_at).toLocaleString(
+                  "en-PH",
+                  { timeZone: "Asia/Manila" },
+                )}
+              </div>
+            )}
 
-          {!isCertified && (
-            <p className="text-xs text-slate-400 mb-3 print:hidden">
-              Click any day row below to correct times or add a remark.
-            </p>
-          )}
-
-          <div className="flex items-center gap-4 mb-2">
-            <img
-              src={caapLogo}
-              alt="CAAP Logo"
-              className="w-16 h-16 object-contain shrink-0"
-            />
-            <div className="flex-1">
-              <p className="text-xs italic">Republic of the Philippines</p>
-              <p className="text-base font-bold">
-                Civil Aviation Authority of the Philippines
+            {!isCertified && (
+              <p className="text-xs text-slate-400 mb-3 print:hidden">
+                Click any day row below to correct times or add a remark.
               </p>
-            </div>
-          </div>
+            )}
 
-          <h1 className="text-center font-bold tracking-widest text-base my-4">
-            DAILY TIME RECORD
-          </h1>
-
-          <div className="text-sm space-y-1 mb-4">
-            <div className="flex gap-2">
-              <span className="shrink-0">Name:</span>
-              <span className="border-b border-slate-800 flex-1 px-1">
-                {dtr.student.name}
-              </span>
-              <span className="shrink-0 ml-3">Course:</span>
-              <span className="border-b border-slate-800 w-40 px-1">
-                {dtr.student.course}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <span className="shrink-0">Agency:</span>
-              <span className="border-b border-slate-800 flex-1 px-1">
-                {dtr.student.agency}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="shrink-0">Month:</span>
-              <span className="border-b border-slate-800 w-24 px-1 shrink-0">
-                {dtr.student.month}
-              </span>
-              <span className="shrink-0 ml-2">Official Hours:</span>
-              <span className="border-b border-slate-800 flex-1 px-1 whitespace-nowrap overflow-hidden text-ellipsis">
-                {dtr.student.officialHours || "—"}
-              </span>
-            </div>
-          </div>
-
-          <table className="w-full text-[10px] border-collapse">
-            <thead>
-              <tr>
-                <th rowSpan={2} className="border border-slate-800 px-1 py-1">
-                  DAY
-                </th>
-                <th colSpan={2} className="border border-slate-800 px-1 py-1">
-                  MORNING
-                </th>
-                <th colSpan={2} className="border border-slate-800 px-1 py-1">
-                  AFTERNOON
-                </th>
-                <th colSpan={2} className="border border-slate-800 px-1 py-1">
-                  OVERTIME
-                </th>
-                <th rowSpan={2} className="border border-slate-800 px-1 py-1">
-                  TOTAL
-                  <br />
-                  HOURS
-                </th>
-                <th
-                  rowSpan={2}
-                  className="border border-slate-800 px-1 py-1 print:hidden"
-                ></th>
-              </tr>
-              <tr>
-                <th className="border border-slate-800 px-1 py-1">IN</th>
-                <th className="border border-slate-800 px-1 py-1">OUT</th>
-                <th className="border border-slate-800 px-1 py-1">IN</th>
-                <th className="border border-slate-800 px-1 py-1">OUT</th>
-                <th className="border border-slate-800 px-1 py-1">IN</th>
-                <th className="border border-slate-800 px-1 py-1">OUT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dtr.days.map((row) => (
-                <DTRRow
-                  key={row.day}
-                  row={row}
-                  editable={!isCertified}
-                  onEdit={() => setEditingDay(row)}
-                  onViewRemarks={() => setViewingRemarks(row)}
-                />
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td
-                  colSpan={7}
-                  className="border border-slate-800 px-1 py-1 font-bold text-center"
-                >
-                  TOTAL HOURS
-                </td>
-                <td className="border border-slate-800 px-1 py-1 font-bold text-center">
-                  {dtr.grandTotal.toFixed(2)}
-                </td>
-                <td className="border border-slate-800 print:hidden"></td>
-              </tr>
-            </tfoot>
-          </table>
-
-          <p className="text-[11px] mt-4 leading-snug">
-            I certify on my honor that the above is a true and correct report of
-            the hours of work performed, which was made daily at the time of IN
-            and OUT from office.
-          </p>
-
-          <div className="flex justify-between mt-10 text-[11px]">
-            <div className="text-center w-[45%]">
-              <div className="border-b border-slate-800 mb-1 px-1 text-[11px] font-bold uppercase">
-                {dtr.student.name}
+            <div className="flex items-center gap-4 mb-2">
+              <img
+                src={caapLogo}
+                alt="CAAP Logo"
+                className="w-16 h-16 object-contain shrink-0"
+              />
+              <div className="flex-1">
+                <p className="text-xs italic">Republic of the Philippines</p>
+                <p className="text-base font-bold">
+                  Civil Aviation Authority of the Philippines
+                </p>
               </div>
-              STUDENT TRAINEE
             </div>
-            <div className="text-center w-[45%]">
-              <div className="border-b border-slate-800 mb-1 px-1 text-[11px] font-bold uppercase">
-                {dtr.student.inChargeName || "\u00A0"}
+
+            <h1 className="text-center font-bold tracking-widest text-base my-4">
+              DAILY TIME RECORD
+            </h1>
+
+            <div className="text-sm space-y-1 mb-4">
+              <div className="flex gap-2">
+                <span className="shrink-0">Name:</span>
+                <span className="border-b border-slate-800 flex-1 px-1">
+                  {dtr.student.name}
+                </span>
+                <span className="shrink-0 ml-3">Course:</span>
+                <span className="border-b border-slate-800 w-40 px-1">
+                  {dtr.student.course}
+                </span>
               </div>
-              IN-CHARGE
+              <div className="flex gap-2">
+                <span className="shrink-0">Agency:</span>
+                <span className="border-b border-slate-800 flex-1 px-1">
+                  {dtr.student.agency}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="shrink-0">Month:</span>
+                <span className="border-b border-slate-800 w-24 px-1 shrink-0">
+                  {dtr.student.month}
+                </span>
+                <span className="shrink-0 ml-2">Official Hours:</span>
+                <span className="border-b border-slate-800 flex-1 px-1 whitespace-nowrap overflow-hidden text-ellipsis">
+                  {dtr.student.officialHours || "—"}
+                </span>
+              </div>
+            </div>
+
+            <table className="w-full text-[10px] border-collapse">
+              <thead>
+                <tr>
+                  <th rowSpan={2} className="border border-slate-800 px-1 py-1">
+                    DAY
+                  </th>
+                  <th colSpan={2} className="border border-slate-800 px-1 py-1">
+                    MORNING
+                  </th>
+                  <th colSpan={2} className="border border-slate-800 px-1 py-1">
+                    AFTERNOON
+                  </th>
+                  <th colSpan={2} className="border border-slate-800 px-1 py-1">
+                    OVERTIME
+                  </th>
+                  <th rowSpan={2} className="border border-slate-800 px-1 py-1">
+                    TOTAL
+                    <br />
+                    HOURS
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="border border-slate-800 px-1 py-1 print:hidden"
+                  ></th>
+                </tr>
+                <tr>
+                  <th className="border border-slate-800 px-1 py-1">IN</th>
+                  <th className="border border-slate-800 px-1 py-1">OUT</th>
+                  <th className="border border-slate-800 px-1 py-1">IN</th>
+                  <th className="border border-slate-800 px-1 py-1">OUT</th>
+                  <th className="border border-slate-800 px-1 py-1">IN</th>
+                  <th className="border border-slate-800 px-1 py-1">OUT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dtr.days.map((row) => (
+                  <DTRRow
+                    key={row.day}
+                    row={row}
+                    editable={!isCertified}
+                    onEdit={() => setEditingDay(row)}
+                    onViewRemarks={() => setViewingRemarks(row)}
+                  />
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="border border-slate-800 px-1 py-1 font-bold text-center"
+                  >
+                    TOTAL HOURS
+                  </td>
+                  <td className="border border-slate-800 px-1 py-1 font-bold text-center">
+                    {dtr.grandTotal.toFixed(2)}
+                  </td>
+                  <td className="border border-slate-800 print:hidden"></td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <p className="text-[11px] mt-4 leading-snug">
+              I certify on my honor that the above is a true and correct report
+              of the hours of work performed, which was made daily at the time
+              of IN and OUT from office.
+            </p>
+
+            <div className="flex justify-between mt-10 text-[11px]">
+              <div className="text-center w-[45%]">
+                <div className="border-b border-slate-800 mb-1 px-1 text-[11px] font-bold uppercase">
+                  {dtr.student.name}
+                </div>
+                STUDENT TRAINEE
+              </div>
+              <div className="text-center w-[45%]">
+                <div className="border-b border-slate-800 mb-1 px-1 text-[11px] font-bold uppercase">
+                  {dtr.student.inChargeName || "\u00A0"}
+                </div>
+                IN-CHARGE
+              </div>
             </div>
           </div>
-        </div>
+        </ResponsiveDocument>
       )}
 
       {editingDay && (

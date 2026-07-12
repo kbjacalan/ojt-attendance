@@ -12,10 +12,10 @@ export default function Dashboard() {
           CAAP OJT Attendance System — Dipolog Airport
         </p>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
             to="/admin/students"
-            className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <Users className="w-6 h-6 text-caap-blue mb-3" />
             <h2 className="font-semibold text-slate-800">Students</h2>
@@ -26,7 +26,7 @@ export default function Dashboard() {
 
           <Link
             to="/admin/agencies"
-            className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <MapPin className="w-6 h-6 text-caap-blue mb-3" />
             <h2 className="font-semibold text-slate-800">Agencies</h2>
@@ -37,7 +37,7 @@ export default function Dashboard() {
 
           <Link
             to="/admin/staff"
-            className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <UserCog className="w-6 h-6 text-caap-blue mb-3" />
             <h2 className="font-semibold text-slate-800">In-Charge Accounts</h2>
@@ -48,7 +48,7 @@ export default function Dashboard() {
 
           <Link
             to="/admin/holidays"
-            className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-md transition-shadow"
+            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <CalendarDays className="w-6 h-6 text-caap-blue mb-3" />
             <h2 className="font-semibold text-slate-800">Holidays</h2>

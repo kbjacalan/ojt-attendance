@@ -63,7 +63,7 @@ export default function Agencies() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Agencies</h1>
             <p className="text-sm text-slate-500">
@@ -73,7 +73,7 @@ export default function Agencies() {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue"
+            className="flex items-center justify-center gap-2 bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue"
           >
             <Plus className="w-4 h-4" /> Add Agency
           </button>
@@ -128,56 +128,94 @@ export default function Agencies() {
               No agencies yet. Add one to get started.
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-left">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Name</th>
-                  <th className="px-4 py-3 font-medium">Coordinates</th>
-                  <th className="px-4 py-3 font-medium">Radius</th>
-                  <th className="px-4 py-3 font-medium">Students</th>
-                  <th className="px-4 py-3 font-medium">In-Charge</th>
-                  <th className="px-4 py-3 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+            <>
+              {/* Table view — tablet and up */}
+              <table className="hidden md:table w-full text-sm">
+                <thead className="bg-slate-50 text-slate-500 text-left">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Name</th>
+                    <th className="px-4 py-3 font-medium">Coordinates</th>
+                    <th className="px-4 py-3 font-medium">Radius</th>
+                    <th className="px-4 py-3 font-medium">Students</th>
+                    <th className="px-4 py-3 font-medium">In-Charge</th>
+                    <th className="px-4 py-3 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {agencies.map((a) => (
+                    <tr key={a.id}>
+                      <td className="px-4 py-3 font-medium text-slate-800">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-slate-400" />
+                          {a.name}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-0.5">
+                          {a.address}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {a.latitude}, {a.longitude}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {a.radius_meters}m
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {a.student_count}
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={a.in_charge_id || ""}
+                          onChange={(e) =>
+                            handleInChargeChange(a.id, e.target.value)
+                          }
+                          className="rounded-lg border border-slate-300 px-2 py-1 text-sm"
+                        >
+                          <option value="">Unassigned</option>
+                          {staff.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.full_name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            onClick={() => setEditingAgency(a)}
+                            className="text-slate-500 hover:text-slate-800"
+                            title="Edit agency"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeletingAgency(a)}
+                            className="text-red-500 hover:text-red-700"
+                            title="Delete agency"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Card view — mobile */}
+              <div className="md:hidden divide-y divide-slate-100">
                 {agencies.map((a) => (
-                  <tr key={a.id}>
-                    <td className="px-4 py-3 font-medium text-slate-800">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-slate-400" />
-                        {a.name}
+                  <div key={a.id} className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 font-medium text-slate-800">
+                          <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span className="truncate">{a.name}</span>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-0.5 truncate">
+                          {a.address}
+                        </p>
                       </div>
-                      <div className="text-xs text-slate-400 mt-0.5">
-                        {a.address}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {a.latitude}, {a.longitude}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {a.radius_meters}m
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {a.student_count}
-                    </td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={a.in_charge_id || ""}
-                        onChange={(e) =>
-                          handleInChargeChange(a.id, e.target.value)
-                        }
-                        className="rounded-lg border border-slate-300 px-2 py-1 text-sm"
-                      >
-                        <option value="">Unassigned</option>
-                        {staff.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.full_name}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-3">
+                      <div className="flex items-center gap-3 shrink-0">
                         <button
                           onClick={() => setEditingAgency(a)}
                           className="text-slate-500 hover:text-slate-800"
@@ -193,11 +231,54 @@ export default function Agencies() {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                    </td>
-                  </tr>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 text-xs">
+                      <div className="min-w-0">
+                        <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
+                          Coordinates
+                        </p>
+                        <p className="text-slate-600 truncate">
+                          {a.latitude}, {a.longitude}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
+                          Radius
+                        </p>
+                        <p className="text-slate-600">{a.radius_meters}m</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
+                          Students
+                        </p>
+                        <p className="text-slate-600">{a.student_count}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1">
+                        In-Charge
+                      </p>
+                      <select
+                        value={a.in_charge_id || ""}
+                        onChange={(e) =>
+                          handleInChargeChange(a.id, e.target.value)
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+                      >
+                        <option value="">Unassigned</option>
+                        {staff.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.full_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </div>
 
@@ -313,7 +394,7 @@ function AgencyForm({ staff, agency, onClose, onCreated }) {
         onChange={(v) => setForm({ ...form, radiusMeters: v })}
       />
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field
           label="Name"
           value={form.name}

@@ -52,37 +52,37 @@ export default function Holidays() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="w-6 h-6 text-caap-blue" />
-            <h1 className="text-2xl font-bold text-slate-900">Holidays</h1>
-          </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue"
-          >
-            <Plus className="w-4 h-4" /> Add Holiday
-          </button>
+        <div className="flex items-center gap-2 mb-1">
+          <CalendarDays className="w-6 h-6 text-caap-blue" />
+          <h1 className="text-2xl font-bold text-slate-900">Holidays</h1>
         </div>
         <p className="text-sm text-slate-500 mb-6">
           Non-working days applied automatically across all students' DTRs. New
           proclamations are typically released around September for the
-          following year — add them here once announced.
+          following year, add them here once announced.
         </p>
 
-        <div className="flex items-center gap-2 mb-4">
-          <label className="text-sm text-slate-600">Year:</label>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-slate-600">Year:</label>
+            <select
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value))}
+              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center justify-center gap-2 bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue shrink-0 whitespace-nowrap"
           >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+            <Plus className="w-4 h-4" /> Add Holiday
+          </button>
         </div>
 
         {error && (
@@ -132,30 +132,84 @@ export default function Holidays() {
               No holidays recorded for {year} yet.
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-left">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Date</th>
-                  <th className="px-4 py-3 font-medium">Name</th>
-                  <th className="px-4 py-3 font-medium">Scope</th>
-                  <th className="px-4 py-3 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+            <>
+              {/* Table view — tablet and up */}
+              <table className="hidden md:table w-full text-sm">
+                <thead className="bg-slate-50 text-slate-500 text-left">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Date</th>
+                    <th className="px-4 py-3 font-medium">Name</th>
+                    <th className="px-4 py-3 font-medium">Scope</th>
+                    <th className="px-4 py-3 font-medium"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {holidays.map((h) => (
+                    <tr key={h.id}>
+                      <td className="px-4 py-3 text-slate-700 font-medium">
+                        {new Date(h.holiday_date).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                          timeZone: "UTC",
+                        })}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{h.name}</td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full font-medium ${
+                            h.is_national
+                              ? "bg-blue-50 text-blue-700"
+                              : "bg-amber-50 text-amber-700"
+                          }`}
+                        >
+                          {h.is_national ? "National" : "Local"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            onClick={() => setEditingHoliday(h)}
+                            className="text-slate-500 hover:text-slate-800"
+                            title="Edit holiday"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeletingHoliday(h)}
+                            className="text-red-500 hover:text-red-700"
+                            title="Delete holiday"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Card view — mobile */}
+              <div className="md:hidden divide-y divide-slate-100">
                 {holidays.map((h) => (
-                  <tr key={h.id}>
-                    <td className="px-4 py-3 text-slate-700 font-medium">
-                      {new Date(h.holiday_date).toLocaleDateString("en-US", {
-                        month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                        timeZone: "UTC",
-                      })}
-                    </td>
-                    <td className="px-4 py-3 text-slate-700">{h.name}</td>
-                    <td className="px-4 py-3">
+                  <div
+                    key={h.id}
+                    className="p-4 flex items-start justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-800 truncate">
+                        {h.name}
+                      </p>
+                      <p className="text-xs text-slate-500 truncate">
+                        {new Date(h.holiday_date).toLocaleDateString("en-US", {
+                          month: "long",
+                          day: "numeric",
+                          year: "numeric",
+                          timeZone: "UTC",
+                        })}
+                      </p>
                       <span
-                        className={`text-xs px-2 py-1 rounded-full font-medium ${
+                        className={`inline-block mt-1 text-xs px-2 py-1 rounded-full font-medium ${
                           h.is_national
                             ? "bg-blue-50 text-blue-700"
                             : "bg-amber-50 text-amber-700"
@@ -163,29 +217,27 @@ export default function Holidays() {
                       >
                         {h.is_national ? "National" : "Local"}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-3">
-                        <button
-                          onClick={() => setEditingHoliday(h)}
-                          className="text-slate-500 hover:text-slate-800"
-                          title="Edit holiday"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingHoliday(h)}
-                          className="text-red-500 hover:text-red-700"
-                          title="Delete holiday"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <button
+                        onClick={() => setEditingHoliday(h)}
+                        className="text-slate-500 hover:text-slate-800"
+                        title="Edit holiday"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setDeletingHoliday(h)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Delete holiday"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -233,7 +285,7 @@ function HolidayForm({ holiday, onClose, onCreated }) {
         {isEditing ? "Edit Holiday" : "New Holiday"}
       </h2>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-slate-600 mb-1">
             Date

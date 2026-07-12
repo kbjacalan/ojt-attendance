@@ -123,10 +123,29 @@ export default function Students() {
   // default so every batch starts expanded.
   const [collapsedBatches, setCollapsedBatches] = useState(() => new Set());
 
+  // Scrolls the add/edit form into view whenever it opens — most useful
+  // for Edit, since the student card that triggered it can be far down
+  // a long, scrolled list.
+  const formSectionRef = useRef(null);
+  useEffect(() => {
+    if ((showForm || editingStudent) && formSectionRef.current) {
+      formSectionRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [showForm, editingStudent]);
+
   const isToday = selectedDate === today;
 
   const pendingCount = students.filter(
     (s) => s.approval_status === "pending",
+  ).length;
+  const approvedCount = students.filter(
+    (s) => s.approval_status === "approved",
+  ).length;
+  const rejectedCount = students.filter(
+    (s) => s.approval_status === "rejected",
   ).length;
 
   useEffect(() => {
@@ -312,10 +331,22 @@ export default function Students() {
     });
   }
 
+  const allBatchesCollapsed =
+    batchGroups.length > 0 &&
+    batchGroups.every(([batchName]) => collapsedBatches.has(batchName));
+
+  function toggleAllBatches() {
+    if (allBatchesCollapsed) {
+      setCollapsedBatches(new Set());
+    } else {
+      setCollapsedBatches(new Set(batchGroups.map(([batchName]) => batchName)));
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Students</h1>
             <p className="text-sm text-slate-500">
@@ -323,35 +354,35 @@ export default function Students() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 min-w-0 flex-1">
               <button
                 onClick={() => shiftDate(-1)}
-                className="p-1.5 rounded hover:bg-slate-200"
+                className="p-1.5 rounded hover:bg-slate-200 shrink-0"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <div className="flex items-center gap-1.5 text-sm">
-                <CalendarDays className="w-4 h-4 text-slate-400" />
+              <div className="flex items-center gap-1.5 text-sm min-w-0 flex-1">
+                <CalendarDays className="w-4 h-4 text-slate-400 shrink-0" />
                 <input
                   type="date"
                   value={selectedDate}
                   max={today}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="border border-slate-300 rounded-lg px-2 py-1 text-sm"
+                  className="border border-slate-300 rounded-lg px-2 py-1 text-sm w-full min-w-[100px]"
                 />
               </div>
               <button
                 onClick={() => shiftDate(1)}
                 disabled={isToday}
-                className="p-1.5 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="p-1.5 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
               {!isToday && (
                 <button
                   onClick={() => setSelectedDate(today)}
-                  className="text-xs text-caap-blue hover:text-caap-navy underline"
+                  className="text-xs text-caap-blue hover:text-caap-navy underline shrink-0 whitespace-nowrap"
                 >
                   Today
                 </button>
@@ -360,9 +391,10 @@ export default function Students() {
 
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue"
+              className="flex items-center justify-center gap-2 bg-caap-navy text-white px-3 min-[376px]:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-caap-blue shrink-0"
             >
-              <Plus className="w-4 h-4" /> Add Student
+              <Plus className="w-4 h-4" />
+              <span className="hidden min-[376px]:inline">Add Student</span>
             </button>
           </div>
         </div>
@@ -373,131 +405,142 @@ export default function Students() {
           </div>
         )}
 
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto flex-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {[
-            { key: "all", label: "All" },
-            { key: "pending", label: "Pending" },
-            { key: "approved", label: "Approved" },
-            { key: "rejected", label: "Rejected" },
+            { key: "all", label: "All", count: students.length },
+            { key: "pending", label: "Pending", count: pendingCount },
+            { key: "approved", label: "Approved", count: approvedCount },
+            { key: "rejected", label: "Rejected", count: rejectedCount },
           ].map((f) => (
             <button
               key={f.key}
               onClick={() => setApprovalFilter(f.key)}
-              className={`text-sm px-3 py-1.5 rounded-full font-medium transition-colors ${
+              className={`inline-flex items-center shrink-0 text-xs sm:text-sm px-3 py-1.5 rounded-full font-medium transition-colors ${
                 approvalFilter === f.key
                   ? "bg-caap-navy text-white"
                   : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
               {f.label}
-              {f.key === "pending" && pendingCount > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-400 text-amber-900 text-[10px] font-semibold leading-none">
-                  {pendingCount}
+              {f.count > 0 && (
+                <span
+                  className={`ml-1.5 inline-flex items-center justify-center min-w-[16px] sm:min-w-[18px] h-[16px] sm:h-[18px] px-1 rounded-full text-[9px] sm:text-[10px] font-semibold leading-none ${
+                    f.key === "pending"
+                      ? "bg-amber-400 text-amber-900"
+                      : approvalFilter === f.key
+                        ? "bg-white/20 text-white"
+                        : "bg-slate-200 text-slate-600"
+                  }`}
+                >
+                  {f.count}
                 </span>
               )}
             </button>
           ))}
         </div>
 
-        {/* Search bar */}
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by name, university, course, or email…"
-            className="w-full rounded-lg border border-slate-300 pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              title="Clear search"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Filters & sorting */}
-        <div className="flex flex-wrap items-center gap-2 mb-6">
-          <FilterSelect
-            label="University"
-            value={universityFilter}
-            onChange={setUniversityFilter}
-            options={universityOptions}
-          />
-          <FilterSelect
-            label="Batch"
-            value={batchFilter}
-            onChange={setBatchFilter}
-            options={batchOptions}
-            optionLabels={batchOptionLabels}
-          />
-          <FilterSelect
-            label="Status"
-            value={ojtStatusFilter}
-            onChange={setOjtStatusFilter}
-            options={Object.keys(OJT_STATUS_LABELS)}
-            optionLabels={OJT_STATUS_LABELS}
-          />
-          {courseOptions.length > 0 && (
-            <FilterSelect
-              label="Course/Program"
-              value={courseFilter}
-              onChange={setCourseFilter}
-              options={courseOptions}
+        {/* Search, filters & sorting */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, university, course, or email…"
+              className="w-full rounded-lg border border-slate-300 pl-9 pr-9 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
             />
-          )}
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                title="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-          {hasActiveFilters && (
-            <button
-              onClick={clearFilters}
-              className="text-xs text-slate-500 hover:text-slate-700 underline"
-            >
-              Clear filters
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterSelect
+              label="University"
+              value={universityFilter}
+              onChange={setUniversityFilter}
+              options={universityOptions}
+            />
+            <FilterSelect
+              label="Batch"
+              value={batchFilter}
+              onChange={setBatchFilter}
+              options={batchOptions}
+              optionLabels={batchOptionLabels}
+            />
+            <FilterSelect
+              label="Status"
+              value={ojtStatusFilter}
+              onChange={setOjtStatusFilter}
+              options={Object.keys(OJT_STATUS_LABELS)}
+              optionLabels={OJT_STATUS_LABELS}
+            />
+            {courseOptions.length > 0 && (
+              <FilterSelect
+                label="Course/Program"
+                value={courseFilter}
+                onChange={setCourseFilter}
+                options={courseOptions}
+              />
+            )}
 
-          <div className="ml-auto flex items-center gap-1.5 text-sm">
-            <span className="text-slate-500">Sort by:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="text-xs text-slate-500 hover:text-slate-700 underline"
+              >
+                Clear filters
+              </button>
+            )}
+
+            <div className="w-full flex items-center gap-1.5 text-xs sm:text-sm sm:w-auto sm:ml-auto">
+              <span className="text-slate-500 shrink-0">Sort by:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="flex-1 sm:flex-none rounded-lg border border-slate-300 px-2 py-1.5 text-xs sm:text-sm"
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        {showForm && (
-          <StudentForm
-            agencies={agencies}
-            onClose={() => setShowForm(false)}
-            onCreated={() => {
-              setShowForm(false);
-              loadData(selectedDate);
-            }}
-          />
-        )}
+        <div ref={formSectionRef}>
+          {showForm && (
+            <StudentForm
+              agencies={agencies}
+              onClose={() => setShowForm(false)}
+              onCreated={() => {
+                setShowForm(false);
+                loadData(selectedDate);
+              }}
+            />
+          )}
 
-        {editingStudent && (
-          <EditStudentForm
-            student={editingStudent}
-            agencies={agencies}
-            onClose={() => setEditingStudent(null)}
-            onSaved={() => {
-              setEditingStudent(null);
-              loadData(selectedDate);
-            }}
-          />
-        )}
+          {editingStudent && (
+            <EditStudentForm
+              student={editingStudent}
+              agencies={agencies}
+              onClose={() => setEditingStudent(null)}
+              onSaved={() => {
+                setEditingStudent(null);
+                loadData(selectedDate);
+              }}
+            />
+          )}
+        </div>
 
         {deletingStudent && (
           <ConfirmModal
@@ -527,13 +570,33 @@ export default function Students() {
             <LoaderCircle className="w-5 h-5 animate-spin" />
           </div>
         ) : filteredStudents.length === 0 ? (
-          <div className="text-center py-12 text-slate-400 text-sm bg-white rounded-2xl border border-slate-200">
-            {students.length === 0
-              ? "No students yet. Add one to get started."
-              : "No students match your search/filters."}
+          <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+            <p className="text-slate-400 text-sm">
+              {students.length === 0
+                ? "No students yet. Add one to get started."
+                : "No students match your search/filters."}
+            </p>
+            {hasActiveFilters && students.length > 0 && (
+              <button
+                onClick={clearFilters}
+                className="mt-2 text-xs text-caap-blue hover:text-caap-navy underline"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
+            {batchGroups.length > 1 && (
+              <div className="flex justify-end">
+                <button
+                  onClick={toggleAllBatches}
+                  className="text-xs text-slate-500 hover:text-slate-700 underline"
+                >
+                  {allBatchesCollapsed ? "Expand all" : "Collapse all"}
+                </button>
+              </div>
+            )}
             {batchGroups.map(([batchName, batchStudents]) => (
               <BatchGroup
                 key={batchName}
@@ -564,7 +627,7 @@ function FilterSelect({ label, value, onChange, options, optionLabels }) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`rounded-lg border px-3 py-1.5 text-sm ${
+      className={`rounded-lg border px-3 py-1.5 text-xs sm:text-sm ${
         value === "all"
           ? "border-slate-300 text-slate-600"
           : "border-caap-blue text-caap-navy bg-caap-blue/5 font-medium"
@@ -626,17 +689,21 @@ function BatchGroup({
   onToggleActive,
   onDelete,
 }) {
+  const pendingInBatch = students.filter(
+    (s) => s.approval_status === "pending",
+  ).length;
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {collapsed ? (
-            <ChevronRight className="w-4 h-4 text-slate-400" />
+            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
+            <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
           )}
           <Truncate
             as="span"
@@ -648,193 +715,399 @@ function BatchGroup({
             }
           />
         </div>
-        <span className="flex items-center gap-1.5 text-xs text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded-full">
-          <Users className="w-3.5 h-3.5" />
-          {students.length} student{students.length === 1 ? "" : "s"}
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          {pendingInBatch > 0 && (
+            <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+              <Clock className="w-3.5 h-3.5" />
+              {pendingInBatch} pending
+            </span>
+          )}
+          <span className="flex items-center gap-1.5 text-xs text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded-full">
+            <Users className="w-3.5 h-3.5" />
+            {students.length} student{students.length === 1 ? "" : "s"}
+          </span>
+        </div>
       </button>
 
       {!collapsed && (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs table-fixed">
-            <colgroup>
-              <col style={{ width: "17%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "9%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "8%" }} />
-            </colgroup>
-            <thead className="bg-slate-50 text-slate-500 text-left border-t border-slate-100">
-              <tr>
-                <th className="px-2 py-2 font-medium truncate">Name</th>
-                <th className="px-2 py-2 font-medium truncate">University</th>
-                <th className="px-2 py-2 font-medium truncate">Course</th>
-                <th className="px-2 py-2 font-medium truncate">Agency</th>
-                <th className="px-2 py-2 font-medium truncate">
-                  {isToday ? "Today" : selectedDate}
-                </th>
-                <th className="px-2 py-2 font-medium truncate">OJT Status</th>
-                <th className="px-2 py-2 font-medium truncate">Account</th>
-                <th className="px-2 py-2 font-medium"></th>
-                <th className="px-2 py-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {students.map((s) => (
-                <tr key={s.student_id}>
-                  <td className="px-2 py-1.5 truncate">
-                    <Truncate
-                      as="div"
-                      className="font-medium text-slate-800"
-                      text={s.full_name}
-                    />
-                    <Truncate
-                      as="div"
-                      className="text-[11px] text-slate-400"
-                      text={s.email}
-                    />
-                  </td>
-                  <td className="px-2 py-1.5 text-slate-600">
-                    <div className="flex items-center gap-1 min-w-0">
-                      <GraduationCap className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                      <Truncate text={s.university || "—"} />
-                    </div>
-                  </td>
-                  <td className="px-2 py-1.5 text-slate-600 truncate">
-                    <Truncate text={s.course || "—"} />
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <div className="relative">
-                      <select
-                        value={s.agency_id || ""}
-                        onChange={(e) =>
-                          onAgencyChange(s.student_id, e.target.value)
-                        }
-                        className="w-full appearance-none rounded-lg border border-slate-300 pl-1.5 pr-5 py-1 text-xs truncate"
-                      >
-                        <option value="">Unassigned</option>
-                        {agencies.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.name}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
-                    </div>
-                  </td>
-                  <td className="px-2 py-1.5 truncate">
-                    <DutyStatusBadge
-                      status={s.status}
-                      lastPunchLabel={s.lastPunchLabel}
-                      lastPunchTime={s.lastPunchTime}
-                      isToday={isToday}
-                    />
-                  </td>
-                  <td className="px-2 py-1.5">
-                    <Truncate
-                      className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium inline-block max-w-full ${
-                        OJT_STATUS_STYLES[s.ojt_status || "active"]
-                      }`}
-                      text={OJT_STATUS_LABELS[s.ojt_status || "active"]}
-                    />
-                  </td>
-                  <td className="px-2 py-1.5">
-                    {s.approval_status === "pending" && (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 max-w-full">
-                        <Clock className="w-3 h-3 shrink-0" />
-                        <Truncate text="Pending" />
-                      </span>
-                    )}
-                    {s.approval_status === "rejected" && (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200 max-w-full">
-                        <XCircle className="w-3 h-3 shrink-0" />
-                        <Truncate text="Rejected" />
-                      </span>
-                    )}
-                    {s.approval_status === "approved" && (
+        <>
+          {/* Table view — tablet and up */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-xs table-fixed">
+              <colgroup>
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "8%" }} />
+              </colgroup>
+              <thead className="bg-slate-50 text-slate-500 text-left border-t border-slate-100">
+                <tr>
+                  <th className="px-2 py-2 font-medium truncate">Name</th>
+                  <th className="px-2 py-2 font-medium truncate">University</th>
+                  <th className="px-2 py-2 font-medium truncate">Course</th>
+                  <th className="px-2 py-2 font-medium truncate">Agency</th>
+                  <th className="px-2 py-2 font-medium truncate">
+                    {isToday ? "Today" : selectedDate}
+                  </th>
+                  <th className="px-2 py-2 font-medium truncate">OJT Status</th>
+                  <th className="px-2 py-2 font-medium truncate">Account</th>
+                  <th className="px-2 py-2 font-medium"></th>
+                  <th className="px-2 py-2 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {students.map((s) => (
+                  <tr key={s.student_id}>
+                    <td className="px-2 py-1.5 truncate">
+                      <Truncate
+                        as="div"
+                        className="font-medium text-slate-800"
+                        text={s.full_name}
+                      />
+                      <Truncate
+                        as="div"
+                        className="text-[11px] text-slate-400"
+                        text={s.email}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5 text-slate-600">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <GraduationCap className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                        <Truncate text={s.university || "—"} />
+                      </div>
+                    </td>
+                    <td className="px-2 py-1.5 text-slate-600 truncate">
+                      <Truncate text={s.course || "—"} />
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <div className="relative">
+                        <select
+                          value={s.agency_id || ""}
+                          onChange={(e) =>
+                            onAgencyChange(s.student_id, e.target.value)
+                          }
+                          className="w-full appearance-none rounded-lg border border-slate-300 pl-1.5 pr-5 py-1 text-xs truncate"
+                        >
+                          <option value="">Unassigned</option>
+                          {agencies.map((a) => (
+                            <option key={a.id} value={a.id}>
+                              {a.name}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                      </div>
+                    </td>
+                    <td className="px-2 py-1.5 truncate">
+                      <DutyStatusBadge
+                        status={s.status}
+                        lastPunchLabel={s.lastPunchLabel}
+                        lastPunchTime={s.lastPunchTime}
+                        isToday={isToday}
+                      />
+                    </td>
+                    <td className="px-2 py-1.5">
                       <Truncate
                         className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium inline-block max-w-full ${
-                          s.is_active
-                            ? "bg-emerald-50 text-emerald-700"
-                            : "bg-slate-100 text-slate-500"
+                          OJT_STATUS_STYLES[s.ojt_status || "active"]
                         }`}
-                        text={s.is_active ? "Active" : "Deactivated"}
+                        text={OJT_STATUS_LABELS[s.ojt_status || "active"]}
                       />
-                    )}
-                  </td>
-                  <td className="px-2 py-1.5 text-right">
-                    <Link
-                      to={`/admin/students/${s.student_id}/dtr`}
-                      className="inline-flex items-center gap-1 text-caap-blue hover:text-caap-navy text-xs font-medium truncate max-w-full"
-                      title="View DTR"
-                    >
-                      <FileText className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">DTR</span>
-                    </Link>
-                  </td>
-                  <td className="px-2 py-1.5 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {s.approval_status !== "approved" && (
-                        <button
-                          onClick={() => onApprove(s.student_id)}
-                          className="text-emerald-600 hover:text-emerald-800"
-                          title="Approve"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                    </td>
+                    <td className="px-2 py-1.5">
                       {s.approval_status === "pending" && (
-                        <button
-                          onClick={() => onReject(s.student_id)}
-                          className="text-amber-600 hover:text-amber-800"
-                          title="Reject"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                        </button>
+                        <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 max-w-full">
+                          <Clock className="w-3 h-3 shrink-0" />
+                          <Truncate text="Pending" />
+                        </span>
+                      )}
+                      {s.approval_status === "rejected" && (
+                        <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200 max-w-full">
+                          <XCircle className="w-3 h-3 shrink-0" />
+                          <Truncate text="Rejected" />
+                        </span>
                       )}
                       {s.approval_status === "approved" && (
-                        <>
-                          <button
-                            onClick={() => onEdit(s)}
-                            className="text-slate-500 hover:text-slate-800"
-                            title="Edit"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              onToggleActive(s.user_id, s.is_active)
-                            }
-                            className="text-slate-500 hover:text-slate-800"
-                            title={s.is_active ? "Deactivate" : "Activate"}
-                          >
-                            {s.is_active ? (
-                              <UserX className="w-3.5 h-3.5" />
-                            ) : (
-                              <UserCheck className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </>
+                        <Truncate
+                          className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium inline-block max-w-full ${
+                            s.is_active
+                              ? "bg-emerald-50 text-emerald-700"
+                              : "bg-slate-100 text-slate-500"
+                          }`}
+                          text={s.is_active ? "Active" : "Deactivated"}
+                        />
                       )}
-                      <button
-                        onClick={() => onDelete(s)}
-                        className="text-red-500 hover:text-red-700"
-                        title="Delete permanently"
+                    </td>
+                    <td className="px-2 py-1.5 text-right">
+                      <Link
+                        to={`/admin/students/${s.student_id}/dtr`}
+                        className="inline-flex items-center gap-1 text-caap-blue hover:text-caap-navy text-xs font-medium truncate max-w-full"
+                        title="View DTR"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        <FileText className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">DTR</span>
+                      </Link>
+                    </td>
+                    <td className="px-2 py-1.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {s.approval_status !== "approved" && (
+                          <button
+                            onClick={() => onApprove(s.student_id)}
+                            className="text-emerald-600 hover:text-emerald-800"
+                            title="Approve"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {s.approval_status === "pending" && (
+                          <button
+                            onClick={() => onReject(s.student_id)}
+                            className="text-amber-600 hover:text-amber-800"
+                            title="Reject"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {s.approval_status === "approved" && (
+                          <>
+                            <button
+                              onClick={() => onEdit(s)}
+                              className="text-slate-500 hover:text-slate-800"
+                              title="Edit"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() =>
+                                onToggleActive(s.user_id, s.is_active)
+                              }
+                              className="text-slate-500 hover:text-slate-800"
+                              title={s.is_active ? "Deactivate" : "Activate"}
+                            >
+                              {s.is_active ? (
+                                <UserX className="w-3.5 h-3.5" />
+                              ) : (
+                                <UserCheck className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </>
+                        )}
+                        <button
+                          onClick={() => onDelete(s)}
+                          className="text-red-500 hover:text-red-700"
+                          title="Delete permanently"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Card view — mobile */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {students.map((s) => (
+              <StudentCard
+                key={s.student_id}
+                student={s}
+                isToday={isToday}
+                selectedDate={selectedDate}
+                agencies={agencies}
+                onAgencyChange={onAgencyChange}
+                onApprove={onApprove}
+                onReject={onReject}
+                onEdit={onEdit}
+                onToggleActive={onToggleActive}
+                onDelete={onDelete}
+              />
+            ))}
+          </div>
+        </>
       )}
+    </div>
+  );
+}
+
+/**
+ * Mobile counterpart to the students table row — same data and actions,
+ * laid out as a stacked card so it stays readable and tappable on small
+ * screens instead of forcing a 9-column table to scroll horizontally.
+ */
+function StudentCard({
+  student: s,
+  isToday,
+  selectedDate,
+  agencies,
+  onAgencyChange,
+  onApprove,
+  onReject,
+  onEdit,
+  onToggleActive,
+  onDelete,
+}) {
+  return (
+    <div className="p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <Truncate
+            as="p"
+            className="font-medium text-slate-800"
+            text={s.full_name}
+          />
+          <Truncate
+            as="p"
+            className="text-[11px] text-slate-400"
+            text={s.email}
+          />
+        </div>
+        <Link
+          to={`/admin/students/${s.student_id}/dtr`}
+          className="shrink-0 inline-flex items-center gap-1 text-caap-blue hover:text-caap-navy text-xs font-medium"
+          title="View DTR"
+        >
+          <FileText className="w-3.5 h-3.5" /> DTR
+        </Link>
+      </div>
+
+      <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs">
+        <div className="min-w-0">
+          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
+            University
+          </p>
+          <div className="flex items-center gap-1 min-w-0 text-slate-600">
+            <GraduationCap className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+            <Truncate text={s.university || "—"} />
+          </div>
+        </div>
+        <div className="min-w-0">
+          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
+            Course
+          </p>
+          <Truncate className="text-slate-600" text={s.course || "—"} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
+            {isToday ? "Today" : selectedDate}
+          </p>
+          <DutyStatusBadge
+            status={s.status}
+            lastPunchLabel={s.lastPunchLabel}
+            lastPunchTime={s.lastPunchTime}
+            isToday={isToday}
+          />
+        </div>
+        <div className="min-w-0">
+          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
+            OJT Status
+          </p>
+          <Truncate
+            className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium inline-block max-w-full ${
+              OJT_STATUS_STYLES[s.ojt_status || "active"]
+            }`}
+            text={OJT_STATUS_LABELS[s.ojt_status || "active"]}
+          />
+        </div>
+        <div className="col-span-2 min-w-0">
+          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1">
+            Agency
+          </p>
+          <div className="relative">
+            <select
+              value={s.agency_id || ""}
+              onChange={(e) => onAgencyChange(s.student_id, e.target.value)}
+              className="w-full appearance-none rounded-lg border border-slate-300 pl-2 pr-6 py-1.5 text-xs"
+            >
+              <option value="">Unassigned</option>
+              {agencies.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+          </div>
+        </div>
+        <div className="col-span-2 min-w-0">
+          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1">
+            Account
+          </p>
+          {s.approval_status === "pending" && (
+            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200">
+              <Clock className="w-3 h-3 shrink-0" /> Pending
+            </span>
+          )}
+          {s.approval_status === "rejected" && (
+            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200">
+              <XCircle className="w-3 h-3 shrink-0" /> Rejected
+            </span>
+          )}
+          {s.approval_status === "approved" && (
+            <span
+              className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium inline-block ${
+                s.is_active
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {s.is_active ? "Active" : "Deactivated"}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5">
+        {s.approval_status !== "approved" && (
+          <button
+            onClick={() => onApprove(s.student_id)}
+            className="flex items-center gap-1 text-emerald-600 hover:text-emerald-800 text-xs font-medium"
+          >
+            <CheckCircle2 className="w-4 h-4" /> Approve
+          </button>
+        )}
+        {s.approval_status === "pending" && (
+          <button
+            onClick={() => onReject(s.student_id)}
+            className="flex items-center gap-1 text-amber-600 hover:text-amber-800 text-xs font-medium"
+          >
+            <XCircle className="w-4 h-4" /> Reject
+          </button>
+        )}
+        {s.approval_status === "approved" && (
+          <>
+            <button
+              onClick={() => onEdit(s)}
+              className="flex items-center gap-1 text-slate-500 hover:text-slate-800 text-xs font-medium"
+            >
+              <Pencil className="w-4 h-4" /> Edit
+            </button>
+            <button
+              onClick={() => onToggleActive(s.user_id, s.is_active)}
+              className="flex items-center gap-1 text-slate-500 hover:text-slate-800 text-xs font-medium"
+            >
+              {s.is_active ? (
+                <UserX className="w-4 h-4" />
+              ) : (
+                <UserCheck className="w-4 h-4" />
+              )}
+              {s.is_active ? "Deactivate" : "Activate"}
+            </button>
+          </>
+        )}
+        <button
+          onClick={() => onDelete(s)}
+          className="ml-auto flex items-center gap-1 text-red-500 hover:text-red-700 text-xs font-medium"
+        >
+          <Trash2 className="w-4 h-4" /> Delete
+        </button>
+      </div>
     </div>
   );
 }
@@ -887,7 +1160,7 @@ function StudentForm({ agencies, onClose, onCreated }) {
     >
       <h2 className="font-semibold text-slate-800">New Student</h2>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field
           label="Full Name"
           value={form.fullName}
@@ -1045,7 +1318,7 @@ function EditStudentForm({ student, agencies, onClose, onSaved }) {
     >
       <h2 className="font-semibold text-slate-800">Edit Student</h2>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field
           label="Full Name"
           value={form.fullName}
