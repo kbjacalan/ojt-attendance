@@ -129,9 +129,8 @@ export default function Signup() {
             Registration Submitted
           </h1>
           <p className="text-sm text-slate-600 mb-6">
-            Your account has been created and is now pending admin approval.
-            You'll be able to log in once your OJT coordinator reviews and
-            approves your registration.
+            Your account has been created and is awaiting admin approval. You
+            can log in once approved.
           </p>
           <Link
             to="/login"
