@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-caap-navy: #0b2447;
+  --color-caap-blue: #19376d;
+  --color-caap-sky: #576cbc;
+  --color-caap-gold: #f5b800;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* "You are here" pulsing dot on the Attendance page live map */
+@keyframes gps-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  70% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+.gps-pulse-ring {
+  animation: gps-pulse 2s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
+}
