@@ -255,6 +255,7 @@ export default function Attendance() {
             onPunchSuccess={loadDTR}
             disabledReason={disabledReason}
             liveGeofence={geofence}
+            isUnassigned={isUnassigned}
           />
 
           <Link

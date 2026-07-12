@@ -279,6 +279,13 @@ function ClosingSoonWarning({ suggestion }) {
  * null), passed through only so the status badge below can be seeded
  * with it — never used to gate the actual submit. The punch itself
  * always waits on a fresh, uncached GPS fix via useGeolocation.
+ *
+ * `isUnassigned` (optional): true if the student has no agency yet.
+ * Missed-punch detection is purely time-of-day based (see
+ * getMissedPeriods) and has no concept of "not assigned yet", so
+ * without this flag an unassigned student would be told they missed
+ * AM/PM punches for a schedule they were never given in the first
+ * place. When true, missed-punch state is suppressed entirely.
  */
 export default function TimeInOutButton({
   studentId,
@@ -286,6 +293,7 @@ export default function TimeInOutButton({
   onPunchSuccess,
   disabledReason,
   liveGeofence,
+  isUnassigned,
 }) {
   const { status, error, getPosition } = useGeolocation();
   const [submitting, setSubmitting] = useState(null); // 'in' | 'out' | null
@@ -293,7 +301,7 @@ export default function TimeInOutButton({
   const resultRef = useRef(null);
 
   const suggestion = resolveSuggestion(todayDay);
-  const missedPeriods = getMissedPeriods(todayDay);
+  const missedPeriods = isUnassigned ? [] : getMissedPeriods(todayDay);
   const isLocked = submitting !== null || Boolean(disabledReason);
 
   // Scroll the result banner into view as soon as it appears. On a
