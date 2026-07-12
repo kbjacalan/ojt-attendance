@@ -8,6 +8,7 @@ import {
   Circle,
   Clock,
   ShieldAlert,
+  Info,
 } from "lucide-react";
 import { useGeolocation } from "../../hooks/useGeolocation";
 import { timeIn, timeOut } from "../../services/api";
@@ -127,10 +128,29 @@ function MissedPunchNotice({ missedPeriods }) {
           ))}
         </ul>
         <p className="mt-1.5 text-[13px] text-red-600/90">
-          This can only be fixed by your agency in-charge or the OJT admin —
+          This can only be fixed by your agency in-charge or the OJT admin,
           please let them know so they can correct it for you.
         </p>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Reassures a student who's just been assigned but hasn't logged a
+ * single punch yet — the gap MissedPunchNotice deliberately stays
+ * quiet for (see hasNeverPunched). Purely informational, never
+ * disables anything; distinct from disabledReason's amber warning,
+ * which is reserved for things that actually block timing in/out.
+ */
+function FirstTimeNotice({ agencyName }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 text-sm mb-3">
+      <Info className="w-4 h-4 shrink-0 mt-0.5" />
+      <span>
+        You&apos;ve been assigned to {agencyName || "your agency"}. Your
+        attendance tracking starts once you time in.
+      </span>
     </div>
   );
 }
@@ -234,59 +254,6 @@ function ClosingSoonWarning({ suggestion }) {
   );
 }
 
-/**
- * Lets a student time in/out for the shift period the app determines
- * they most likely need right now: a single primary button, no
- * period picker to think about.
- *
- * A period that's genuinely been missed (its window closed with no
- * time-in, or a time-in but no time-out) is never offered as a
- * tappable action — punching now would just backfill the current
- * moment into the wrong slot. Instead a MissedPunchNotice tells the
- * student what was missed and to contact their agency in-charge or
- * the OJT admin to have it corrected. The backend enforces this
- * independently (PERIOD_MISSED), so this is a proactive UX layer,
- * not the only safeguard.
- *
- * A TodayShiftsStrip shows both AM and PM at a glance, and a
- * ClosingSoonWarning nudges the student before a window closes,
- * rather than only telling them after it's too late.
- *
- * On press:
- *   1. Requests a fresh GPS fix from the browser (always a new
- *      request, never cached; see useGeolocation)
- *   2. Sends it + the period to the backend, which validates the
- *      geofence and writes the current timestamp into that period's
- *      column for today's date
- *   3. Shows a success or rejection message back to the student
- *
- * `studentId` comes from the authenticated user context, passed as a
- * prop to keep this component decoupled from auth setup.
- *
- * `todayDay` (optional): today's DTR day object ({ amIn, amOut, pmIn,
- * pmOut } as "HH:MM" strings), used to figure out the suggested
- * action and each period's status.
- *
- * `onPunchSuccess` (optional) fires after a successful time-in/out, so
- * a parent page can refresh anything derived from today's attendance.
- *
- * `disabledReason` (optional): if set, everything is disabled and this
- * message is shown instead (e.g. no agency assigned yet, or the
- * student's live position is known to be outside the geofence).
- *
- * `liveGeofence` (optional): the geofence reading from the map's
- * continuously-watched position ({ withinRadius, distanceMeters } |
- * null), passed through only so the status badge below can be seeded
- * with it — never used to gate the actual submit. The punch itself
- * always waits on a fresh, uncached GPS fix via useGeolocation.
- *
- * `isUnassigned` (optional): true if the student has no agency yet.
- * Missed-punch detection is purely time-of-day based (see
- * getMissedPeriods) and has no concept of "not assigned yet", so
- * without this flag an unassigned student would be told they missed
- * AM/PM punches for a schedule they were never given in the first
- * place. When true, missed-punch state is suppressed entirely.
- */
 export default function TimeInOutButton({
   studentId,
   todayDay,
@@ -294,6 +261,8 @@ export default function TimeInOutButton({
   disabledReason,
   liveGeofence,
   isUnassigned,
+  hasNeverPunched,
+  agencyName,
 }) {
   const { status, error, getPosition } = useGeolocation();
   const [submitting, setSubmitting] = useState(null); // 'in' | 'out' | null
@@ -301,7 +270,8 @@ export default function TimeInOutButton({
   const resultRef = useRef(null);
 
   const suggestion = resolveSuggestion(todayDay);
-  const missedPeriods = isUnassigned ? [] : getMissedPeriods(todayDay);
+  const suppressMissed = isUnassigned || hasNeverPunched;
+  const missedPeriods = suppressMissed ? [] : getMissedPeriods(todayDay);
   const isLocked = submitting !== null || Boolean(disabledReason);
 
   // Scroll the result banner into view as soon as it appears. On a
@@ -354,6 +324,10 @@ export default function TimeInOutButton({
           <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <span>{disabledReason}</span>
         </div>
+      )}
+
+      {!isUnassigned && hasNeverPunched && (
+        <FirstTimeNotice agencyName={agencyName} />
       )}
 
       <MissedPunchNotice missedPeriods={missedPeriods} />

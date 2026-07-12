@@ -115,6 +115,18 @@ export default function Attendance() {
     dtr?.student?.agency === "Unassigned" || Boolean(agencyError);
   const firstName = user.fullName?.split(" ")[0] || "there";
 
+  // True until the student's very first recorded punch (this month —
+  // the DTR endpoint is month-scoped, so this is a reasonable proxy for
+  // "hasn't started yet" without a dedicated backend flag). Missed-punch
+  // detection is time-of-day only (see getMissedPeriods) and can't tell
+  // "genuinely missed" apart from "was just assigned and hasn't had
+  // their first shift yet", so a newly-assigned student who hasn't
+  // timed in even once shouldn't be told they missed a punch the
+  // moment today's AM/PM window closes.
+  const hasNeverPunched = !dtr?.days?.some(
+    (d) => d.amIn || d.amOut || d.pmIn || d.pmOut || d.otIn || d.otOut,
+  );
+
   // Reuses the same live position already being watched for the map, so
   // the button can warn/disable itself the moment we know the student is
   // out of range, instead of only finding out after a submit round trip.
@@ -256,6 +268,8 @@ export default function Attendance() {
             disabledReason={disabledReason}
             liveGeofence={geofence}
             isUnassigned={isUnassigned}
+            hasNeverPunched={hasNeverPunched}
+            agencyName={agency?.name}
           />
 
           <Link
