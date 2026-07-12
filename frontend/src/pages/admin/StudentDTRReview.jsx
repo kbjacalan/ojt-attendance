@@ -6,11 +6,10 @@ import {
   ChevronRight,
   CheckCircle2,
   Printer,
-  Pencil,
   Lock,
   MessageSquare,
 } from "lucide-react";
-import { getStudentDTR, correctAttendance } from "../../services/adminApi";
+import { getStudentDTR } from "../../services/adminApi";
 import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
 
@@ -46,7 +45,6 @@ export default function StudentDTRReview() {
   const [dtr, setDtr] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editingDay, setEditingDay] = useState(null);
   const [viewingRemarks, setViewingRemarks] = useState(null);
 
   useEffect(() => {
@@ -134,7 +132,7 @@ export default function StudentDTRReview() {
               <div className="mb-4 flex items-center gap-2 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2 print:hidden">
                 <CheckCircle2 className="w-4 h-4" />
                 Certified on{" "}
-                {new Date(dtr.certification.certified_at).toLocaleString(
+                {new Date(dtr.certification.certifiedAt).toLocaleString(
                   "en-PH",
                   { timeZone: "Asia/Manila" },
                 )}
@@ -145,8 +143,8 @@ export default function StudentDTRReview() {
               </div>
             ) : (
               <p className="text-xs text-slate-400 mb-3 print:hidden">
-                Click any day row below to correct times or add a remark.
-                Certification is managed by the assigned in-charge.
+                This DTR has not been certified yet. Corrections and
+                certification are managed by the assigned in-charge.
               </p>
             )}
 
@@ -168,7 +166,7 @@ export default function StudentDTRReview() {
               DAILY TIME RECORD
             </h1>
 
-            <div className="text-sm space-y-1 mb-4">
+            <div className="text-xs space-y-1 mb-4">
               <div className="flex gap-2">
                 <span className="shrink-0">Name:</span>
                 <span className="border-b border-slate-800 flex-1 px-1">
@@ -217,10 +215,9 @@ export default function StudentDTRReview() {
                     <br />
                     HOURS
                   </th>
-                  <th
-                    rowSpan={2}
-                    className="border border-slate-800 px-1 py-1 print:hidden"
-                  ></th>
+                  <th rowSpan={2} className="border border-slate-800 px-1 py-1">
+                    CERTIFIED BY
+                  </th>
                 </tr>
                 <tr>
                   <th className="border border-slate-800 px-1 py-1">IN</th>
@@ -236,8 +233,7 @@ export default function StudentDTRReview() {
                   <DTRRow
                     key={row.day}
                     row={row}
-                    editable={!isCertified}
-                    onEdit={() => setEditingDay(row)}
+                    signature={dtr.certification?.signature}
                     onViewRemarks={() => setViewingRemarks(row)}
                   />
                 ))}
@@ -253,12 +249,12 @@ export default function StudentDTRReview() {
                   <td className="border border-slate-800 px-1 py-1 font-bold text-center">
                     {dtr.grandTotal.toFixed(2)}
                   </td>
-                  <td className="border border-slate-800 print:hidden"></td>
+                  <td className="border border-slate-800"></td>
                 </tr>
               </tfoot>
             </table>
 
-            <p className="text-[11px] mt-4 leading-snug">
+            <p className="text-xs mt-4 leading-snug">
               I certify on my honor that the above is a true and correct report
               of the hours of work performed, which was made daily at the time
               of IN and OUT from office.
@@ -266,33 +262,36 @@ export default function StudentDTRReview() {
 
             <div className="flex justify-between mt-10 text-[11px]">
               <div className="text-center w-[45%]">
-                <div className="border-b border-slate-800 mb-1 px-1 text-[11px] font-bold uppercase">
+                <div className="h-9 mb-1 px-1 flex items-end justify-center">
+                  {"\u00A0"}
+                </div>
+                <div className="border-b border-slate-800 mb-1 px-1 text-xs font-bold uppercase">
                   {dtr.student.name}
                 </div>
                 STUDENT TRAINEE
               </div>
               <div className="text-center w-[45%]">
-                <div className="border-b border-slate-800 mb-1 px-1 text-[11px] font-bold uppercase">
-                  {dtr.student.inChargeName || "\u00A0"}
+                <div className="h-9 mb-1 px-1 flex items-end justify-center">
+                  {isCertified && dtr.certification?.signature ? (
+                    <img
+                      src={dtr.certification.signature}
+                      alt="In-charge signature"
+                      className="h-9 w-auto max-w-full object-contain translate-y-2"
+                    />
+                  ) : (
+                    "\u00A0"
+                  )}
+                </div>
+                <div className="border-b border-slate-800 mb-1 px-1 text-xs font-bold uppercase">
+                  {(isCertified && dtr.certification?.certifiedByName) ||
+                    dtr.student.inChargeName ||
+                    "\u00A0"}
                 </div>
                 IN-CHARGE
               </div>
             </div>
           </div>
         </ResponsiveDocument>
-      )}
-
-      {editingDay && (
-        <CorrectionModal
-          day={editingDay}
-          month={month}
-          onClose={() => setEditingDay(null)}
-          onSaved={() => {
-            setEditingDay(null);
-            loadDTR(month);
-          }}
-          studentId={studentId}
-        />
       )}
 
       {viewingRemarks && (
@@ -306,50 +305,38 @@ export default function StudentDTRReview() {
   );
 }
 
-function DTRRow({ row, editable, onEdit, onViewRemarks }) {
+function DTRRow({ row, signature, onViewRemarks }) {
   const cellClass = "border border-slate-800 px-1 py-0.5 text-center";
-  const clickable = editable ? "cursor-pointer hover:bg-slate-100" : "";
 
   if (row.status === "weekend") {
     return (
-      <tr className={clickable} onClick={editable ? onEdit : undefined}>
+      <tr>
         <td className={cellClass}>{row.day}</td>
         <td colSpan={6} className={`${cellClass} text-slate-400 italic`}>
           — Weekend —
         </td>
         <td className={cellClass}>0.00</td>
-        {editable && (
-          <td className={`${cellClass} print:hidden`}>
-            <Pencil className="w-3 h-3 mx-auto text-slate-400" />
-          </td>
-        )}
+        <td className={cellClass}></td>
       </tr>
     );
   }
 
   if (row.status === "holiday") {
     return (
-      <tr
-        className={`bg-slate-50 ${clickable}`}
-        onClick={editable ? onEdit : undefined}
-      >
+      <tr className="bg-slate-50">
         <td className={cellClass}>{row.day}</td>
         <td colSpan={6} className={`${cellClass} italic`}>
           {row.label || "Holiday"}
         </td>
         <td className={cellClass}>0.00</td>
-        {editable && (
-          <td className={`${cellClass} print:hidden`}>
-            <Pencil className="w-3 h-3 mx-auto text-slate-400" />
-          </td>
-        )}
+        <td className={cellClass}></td>
       </tr>
     );
   }
 
   if (row.status === "absent") {
     return (
-      <tr className={clickable} onClick={editable ? onEdit : undefined}>
+      <tr>
         <td className={cellClass}>{row.day}</td>
         <td className={cellClass}></td>
         <td className={cellClass}></td>
@@ -358,18 +345,14 @@ function DTRRow({ row, editable, onEdit, onViewRemarks }) {
         <td className={cellClass}></td>
         <td className={cellClass}></td>
         <td className={`${cellClass} text-red-600 font-medium`}>0.00</td>
-        {editable && (
-          <td className={`${cellClass} print:hidden`}>
-            <Pencil className="w-3 h-3 mx-auto text-slate-400" />
-          </td>
-        )}
+        <td className={cellClass}></td>
       </tr>
     );
   }
 
   if (row.status === "pending") {
     return (
-      <tr className={clickable} onClick={editable ? onEdit : undefined}>
+      <tr>
         <td className={cellClass}>{row.day}</td>
         <td className={cellClass}></td>
         <td className={cellClass}></td>
@@ -378,20 +361,13 @@ function DTRRow({ row, editable, onEdit, onViewRemarks }) {
         <td className={cellClass}></td>
         <td className={cellClass}></td>
         <td className={cellClass}></td>
-        {editable && (
-          <td className={`${cellClass} print:hidden`}>
-            <Pencil className="w-3 h-3 mx-auto text-slate-400" />
-          </td>
-        )}
+        <td className={cellClass}></td>
       </tr>
     );
   }
 
   return (
-    <tr
-      className={`${row.isHolidayWorked ? "bg-amber-50" : ""} ${clickable}`}
-      onClick={editable ? onEdit : undefined}
-    >
+    <tr className={row.isHolidayWorked ? "bg-amber-50" : ""}>
       <td className={cellClass}>
         {row.day}
         {row.isHolidayWorked && (
@@ -404,10 +380,7 @@ function DTRRow({ row, editable, onEdit, onViewRemarks }) {
         )}
         {row.remarks && (
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewRemarks();
-            }}
+            onClick={onViewRemarks}
             className="block mx-auto mt-0.5 print:hidden"
             title="View remarks"
           >
@@ -424,149 +397,17 @@ function DTRRow({ row, editable, onEdit, onViewRemarks }) {
       <td className={`${cellClass} font-medium`}>
         {row.totalHours.toFixed(2)}
       </td>
-      {editable && (
-        <td className={`${cellClass} print:hidden`}>
-          <Pencil className="w-3 h-3 mx-auto text-slate-400" />
-        </td>
-      )}
+      <td className={cellClass}>
+        {row.certifiedBy && signature ? (
+          <img
+            src={signature}
+            alt={`Certified by ${row.certifiedBy}`}
+            title={row.certifiedBy}
+            className="h-4 w-auto max-w-full mx-auto object-contain"
+          />
+        ) : null}
+      </td>
     </tr>
-  );
-}
-
-function CorrectionModal({ day, month, studentId, onClose, onSaved }) {
-  const [form, setForm] = useState({
-    amIn: day.amIn || "",
-    amOut: day.amOut || "",
-    pmIn: day.pmIn || "",
-    pmOut: day.pmOut || "",
-    otIn: day.otIn || "",
-    otOut: day.otOut || "",
-    remarks: "",
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
-
-  const dateStr = `${month}-${String(day.day).padStart(2, "0")}`;
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!form.remarks.trim()) {
-      setError("Please explain the reason for this correction.");
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      const times = {
-        amIn: form.amIn || null,
-        amOut: form.amOut || null,
-        pmIn: form.pmIn || null,
-        pmOut: form.pmOut || null,
-        otIn: form.otIn || null,
-        otOut: form.otOut || null,
-      };
-      await correctAttendance(studentId, dateStr, times, form.remarks);
-      onSaved();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50 print:hidden">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h2 className="font-semibold text-slate-800 mb-1">
-          Correct Attendance — Day {day.day}
-        </h2>
-        <p className="text-xs text-slate-500 mb-4">{dateStr}</p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <TimeField
-              label="AM In"
-              value={form.amIn}
-              onChange={(v) => setForm({ ...form, amIn: v })}
-            />
-            <TimeField
-              label="AM Out"
-              value={form.amOut}
-              onChange={(v) => setForm({ ...form, amOut: v })}
-            />
-            <TimeField
-              label="PM In"
-              value={form.pmIn}
-              onChange={(v) => setForm({ ...form, pmIn: v })}
-            />
-            <TimeField
-              label="PM Out"
-              value={form.pmOut}
-              onChange={(v) => setForm({ ...form, pmOut: v })}
-            />
-            <TimeField
-              label="OT In"
-              value={form.otIn}
-              onChange={(v) => setForm({ ...form, otIn: v })}
-            />
-            <TimeField
-              label="OT Out"
-              value={form.otOut}
-              onChange={(v) => setForm({ ...form, otOut: v })}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              Reason for correction (required)
-            </label>
-            <textarea
-              value={form.remarks}
-              onChange={(e) => setForm({ ...form, remarks: e.target.value })}
-              rows={3}
-              placeholder="e.g. Student forgot to time out; confirmed with supervisor."
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
-            />
-          </div>
-
-          {error && <div className="text-sm text-red-600">{error}</div>}
-
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue disabled:opacity-50"
-            >
-              {submitting ? "Saving…" : "Save Correction"}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function TimeField({ label, value, onChange }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-slate-600 mb-1">
-        {label}
-      </label>
-      <input
-        type="time"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
-      />
-    </div>
   );
 }
 

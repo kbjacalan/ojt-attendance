@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   LoaderCircle,
@@ -6,9 +6,11 @@ import {
   ChevronRight,
   CheckCircle2,
   Printer,
-  Pencil,
   XCircle,
   MessageSquare,
+  PenTool,
+  Eraser,
+  AlertCircle,
 } from "lucide-react";
 import {
   getStudentDTR,
@@ -17,6 +19,7 @@ import {
   correctAttendance,
 } from "../../services/inchargeApi";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import SignaturePad from "../../components/common/SignaturePad";
 import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
 
@@ -55,8 +58,9 @@ export default function StudentDTRReview() {
   const [certifying, setCertifying] = useState(false);
   const [editingDay, setEditingDay] = useState(null); // the row object being corrected, or null
   const [viewingRemarks, setViewingRemarks] = useState(null); // the row object whose remarks are being viewed
-  const [showCertifyConfirm, setShowCertifyConfirm] = useState(false);
+  const [showCertifyModal, setShowCertifyModal] = useState(false);
   const [showUncertifyConfirm, setShowUncertifyConfirm] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     loadDTR(month);
@@ -83,14 +87,24 @@ export default function StudentDTRReview() {
     );
   }
 
-  async function handleCertify() {
-    setShowCertifyConfirm(false);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  async function handleCertify(signatureDataUrl) {
+    setShowCertifyModal(false);
     setCertifying(true);
     try {
-      await certifyDTR(studentId, month);
+      await certifyDTR(studentId, month, signatureDataUrl);
       await loadDTR(month);
+      setToast({
+        type: "success",
+        message: "DTR certified successfully.",
+      });
     } catch (err) {
-      alert(err.message);
+      setToast({ type: "error", message: err.message });
     } finally {
       setCertifying(false);
     }
@@ -107,6 +121,13 @@ export default function StudentDTRReview() {
   }
 
   const isCertified = dtr?.certification?.status === "certified";
+  const requiredHours = dtr?.student?.requiredHours || 0;
+  const hoursMet = Boolean(dtr) && dtr.grandTotal >= requiredHours;
+  const certifyDisabledReason = !dtr
+    ? null
+    : !hoursMet
+      ? "Certification is only available after the student has completed the required OJT hours."
+      : null;
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 px-4 print:p-0">
@@ -155,9 +176,10 @@ export default function StudentDTRReview() {
               </button>
             ) : (
               <button
-                onClick={() => setShowCertifyConfirm(true)}
-                disabled={!dtr || certifying}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-caap-gold text-caap-navy px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold hover:brightness-95 disabled:opacity-50"
+                onClick={() => setShowCertifyModal(true)}
+                disabled={!dtr || certifying || !hoursMet}
+                title={certifyDisabledReason || undefined}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-caap-gold text-caap-navy px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 {certifying ? "Certifying…" : "Certify"}
@@ -166,6 +188,27 @@ export default function StudentDTRReview() {
           </div>
         </div>
       </div>
+
+      {!isCertified && dtr && (
+        <div className="max-w-3xl mx-auto -mt-2 mb-4 flex justify-end print:hidden">
+          <span
+            className={`flex flex-col items-end text-[11px] font-medium text-right ${
+              hoursMet ? "text-emerald-600" : "text-amber-600"
+            }`}
+          >
+            <span>
+              {dtr.grandTotal.toFixed(2)} / {requiredHours.toFixed(2)} hrs
+              completed
+            </span>
+            {!hoursMet && (
+              <span className="inline-flex items-center gap-1">
+                <AlertCircle className="w-3 h-3 shrink-0" />
+                Complete required hours to certify
+              </span>
+            )}
+          </span>
+        </div>
+      )}
 
       {loading && (
         <div className="flex justify-center py-16 text-slate-400">
@@ -186,7 +229,7 @@ export default function StudentDTRReview() {
               <div className="mb-4 flex items-center gap-2 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2 print:hidden">
                 <CheckCircle2 className="w-4 h-4" />
                 Certified on{" "}
-                {new Date(dtr.certification.certified_at).toLocaleString(
+                {new Date(dtr.certification.certifiedAt).toLocaleString(
                   "en-PH",
                   { timeZone: "Asia/Manila" },
                 )}
@@ -217,7 +260,7 @@ export default function StudentDTRReview() {
               DAILY TIME RECORD
             </h1>
 
-            <div className="text-sm space-y-1 mb-4">
+            <div className="text-xs space-y-1 mb-4">
               <div className="flex gap-2">
                 <span className="shrink-0">Name:</span>
                 <span className="border-b border-slate-800 flex-1 px-1">
@@ -266,10 +309,9 @@ export default function StudentDTRReview() {
                     <br />
                     HOURS
                   </th>
-                  <th
-                    rowSpan={2}
-                    className="border border-slate-800 px-1 py-1 print:hidden"
-                  ></th>
+                  <th rowSpan={2} className="border border-slate-800 px-1 py-1">
+                    CERTIFIED BY
+                  </th>
                 </tr>
                 <tr>
                   <th className="border border-slate-800 px-1 py-1">IN</th>
@@ -286,6 +328,7 @@ export default function StudentDTRReview() {
                     key={row.day}
                     row={row}
                     editable={!isCertified}
+                    signature={dtr.certification?.signature}
                     onEdit={() => setEditingDay(row)}
                     onViewRemarks={() => setViewingRemarks(row)}
                   />
@@ -302,12 +345,12 @@ export default function StudentDTRReview() {
                   <td className="border border-slate-800 px-1 py-1 font-bold text-center">
                     {dtr.grandTotal.toFixed(2)}
                   </td>
-                  <td className="border border-slate-800 print:hidden"></td>
+                  <td className="border border-slate-800"></td>
                 </tr>
               </tfoot>
             </table>
 
-            <p className="text-[11px] mt-4 leading-snug">
+            <p className="text-xs mt-4 leading-snug">
               I certify on my honor that the above is a true and correct report
               of the hours of work performed, which was made daily at the time
               of IN and OUT from office.
@@ -315,14 +358,30 @@ export default function StudentDTRReview() {
 
             <div className="flex justify-between mt-10 text-[11px]">
               <div className="text-center w-[45%]">
-                <div className="border-b border-slate-800 mb-1 px-1 text-[11px] font-bold uppercase">
+                <div className="h-9 mb-1 px-1 flex items-end justify-center">
+                  {"\u00A0"}
+                </div>
+                <div className="border-b border-slate-800 mb-1 px-1 text-xs font-bold uppercase">
                   {dtr.student.name}
                 </div>
                 STUDENT TRAINEE
               </div>
               <div className="text-center w-[45%]">
-                <div className="border-b border-slate-800 mb-1 px-1 text-[11px] font-bold uppercase">
-                  {dtr.student.inChargeName || "\u00A0"}
+                <div className="h-9 mb-1 px-1 flex items-end justify-center">
+                  {isCertified && dtr.certification?.signature ? (
+                    <img
+                      src={dtr.certification.signature}
+                      alt="In-charge signature"
+                      className="h-9 w-auto max-w-full object-contain translate-y-2"
+                    />
+                  ) : (
+                    "\u00A0"
+                  )}
+                </div>
+                <div className="border-b border-slate-800 mb-1 px-1 text-xs font-bold uppercase">
+                  {(isCertified && dtr.certification?.certifiedByName) ||
+                    dtr.student.inChargeName ||
+                    "\u00A0"}
                 </div>
                 IN-CHARGE
               </div>
@@ -352,14 +411,13 @@ export default function StudentDTRReview() {
         />
       )}
 
-      {showCertifyConfirm && (
-        <ConfirmModal
-          title={`Certify ${dtr.student.name}'s DTR for ${dtr.student.month}?`}
-          message={`This locks in ${dtr.grandTotal.toFixed(2)} total hours as the official, signed-off record. No further corrections can be made unless you uncertify it first.`}
-          confirmLabel="Certify"
-          danger={false}
-          onConfirm={handleCertify}
-          onCancel={() => setShowCertifyConfirm(false)}
+      {showCertifyModal && dtr && (
+        <CertifyModal
+          dtr={dtr}
+          requiredHours={requiredHours}
+          certifying={certifying}
+          onClose={() => setShowCertifyModal(false)}
+          onCertified={handleCertify}
         />
       )}
 
@@ -372,11 +430,30 @@ export default function StudentDTRReview() {
           onCancel={() => setShowUncertifyConfirm(false)}
         />
       )}
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] print:hidden">
+          <div
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium ${
+              toast.type === "error"
+                ? "bg-red-600 text-white"
+                : "bg-emerald-600 text-white"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <AlertCircle className="w-4 h-4 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            )}
+            {toast.message}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function DTRRow({ row, editable, onEdit, onViewRemarks }) {
+function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
   const cellClass = "border border-slate-800 px-1 py-0.5 text-center";
   const clickable = editable ? "cursor-pointer hover:bg-slate-100" : "";
 
@@ -388,11 +465,7 @@ function DTRRow({ row, editable, onEdit, onViewRemarks }) {
           — Weekend —
         </td>
         <td className={cellClass}>0.00</td>
-        {editable && (
-          <td className={`${cellClass} print:hidden`}>
-            <Pencil className="w-3 h-3 mx-auto text-slate-400" />
-          </td>
-        )}
+        <td className={cellClass}></td>
       </tr>
     );
   }
@@ -408,11 +481,7 @@ function DTRRow({ row, editable, onEdit, onViewRemarks }) {
           {row.label || "Holiday"}
         </td>
         <td className={cellClass}>0.00</td>
-        {editable && (
-          <td className={`${cellClass} print:hidden`}>
-            <Pencil className="w-3 h-3 mx-auto text-slate-400" />
-          </td>
-        )}
+        <td className={cellClass}></td>
       </tr>
     );
   }
@@ -428,11 +497,7 @@ function DTRRow({ row, editable, onEdit, onViewRemarks }) {
         <td className={cellClass}></td>
         <td className={cellClass}></td>
         <td className={`${cellClass} text-red-600 font-medium`}>0.00</td>
-        {editable && (
-          <td className={`${cellClass} print:hidden`}>
-            <Pencil className="w-3 h-3 mx-auto text-slate-400" />
-          </td>
-        )}
+        <td className={cellClass}></td>
       </tr>
     );
   }
@@ -448,11 +513,7 @@ function DTRRow({ row, editable, onEdit, onViewRemarks }) {
         <td className={cellClass}></td>
         <td className={cellClass}></td>
         <td className={cellClass}></td>
-        {editable && (
-          <td className={`${cellClass} print:hidden`}>
-            <Pencil className="w-3 h-3 mx-auto text-slate-400" />
-          </td>
-        )}
+        <td className={cellClass}></td>
       </tr>
     );
   }
@@ -494,12 +555,132 @@ function DTRRow({ row, editable, onEdit, onViewRemarks }) {
       <td className={`${cellClass} font-medium`}>
         {row.totalHours.toFixed(2)}
       </td>
-      {editable && (
-        <td className={`${cellClass} print:hidden`}>
-          <Pencil className="w-3 h-3 mx-auto text-slate-400" />
-        </td>
-      )}
+      <td className={cellClass}>
+        {row.certifiedBy && signature ? (
+          <img
+            src={signature}
+            alt={`Certified by ${row.certifiedBy}`}
+            title={row.certifiedBy}
+            className="h-4 w-auto max-w-full mx-auto object-contain"
+          />
+        ) : null}
+      </td>
     </tr>
+  );
+}
+
+/**
+ * Signature-capture modal for the Certify action. The in-charge draws
+ * their signature, then confirms before it's submitted — certification
+ * cannot be completed without a drawn signature (enforced here and,
+ * redundantly, on the backend).
+ */
+function CertifyModal({
+  dtr,
+  requiredHours,
+  certifying,
+  onClose,
+  onCertified,
+}) {
+  const padRef = useRef(null);
+  const [isEmpty, setIsEmpty] = useState(true);
+  const [error, setError] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  function handleClear() {
+    padRef.current?.clear();
+    setError(null);
+  }
+
+  function handleCertifyClick() {
+    if (!padRef.current || padRef.current.isEmpty()) {
+      setError("Please draw your signature before certifying.");
+      return;
+    }
+    setError(null);
+    setShowConfirm(true);
+  }
+
+  function handleConfirm() {
+    const dataUrl = padRef.current.toDataURL();
+    setShowConfirm(false);
+    onCertified(dataUrl);
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50 print:hidden">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+          <h2 className="font-semibold text-slate-800 mb-1 flex items-center gap-2">
+            <PenTool className="w-4 h-4 text-caap-blue" />
+            Certify DTR — {dtr.student.name}
+          </h2>
+          <p className="text-xs text-slate-500 mb-4">
+            {dtr.student.month} ·{" "}
+            <span className="font-medium text-emerald-600">
+              {dtr.grandTotal.toFixed(2)} / {requiredHours.toFixed(2)} hours
+              completed
+            </span>
+          </p>
+
+          <p className="text-xs text-slate-600 mb-2">
+            Sign below to certify this DTR as a true and correct record. Your
+            signature will appear in the CERTIFIED BY column for every completed
+            day and in the IN-CHARGE signature block.
+          </p>
+
+          <div className="border border-slate-300 rounded-lg overflow-hidden">
+            <SignaturePad
+              ref={padRef}
+              width={600}
+              height={180}
+              className="w-full h-[180px]"
+              onChange={setIsEmpty}
+            />
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" /> {error}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2 mt-4">
+            <button
+              onClick={handleCertifyClick}
+              disabled={certifying || isEmpty}
+              className="flex items-center gap-2 bg-caap-gold text-caap-navy px-4 py-2 rounded-lg text-sm font-semibold hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              {certifying ? "Certifying…" : "Certify"}
+            </button>
+            <button
+              onClick={handleClear}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 border border-slate-200"
+            >
+              <Eraser className="w-4 h-4" /> Clear
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 ml-auto"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {showConfirm && (
+        <ConfirmModal
+          title={`Certify ${dtr.student.name}'s DTR for ${dtr.student.month}?`}
+          message={`This locks in ${dtr.grandTotal.toFixed(2)} total hours as the official, signed-off record with your signature. No further corrections can be made unless you uncertify it first.`}
+          confirmLabel="Certify"
+          danger={false}
+          onConfirm={handleConfirm}
+          onCancel={() => setShowConfirm(false)}
+        />
+      )}
+    </>
   );
 }
 

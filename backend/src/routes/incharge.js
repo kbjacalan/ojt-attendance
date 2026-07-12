@@ -45,11 +45,16 @@ router.get("/students/:studentId/dtr", async (req, res) => {
   }
 });
 
-// POST /api/incharge/students/:studentId/certify  { month: 'YYYY-MM' }
+// POST /api/incharge/students/:studentId/certify  { month: 'YYYY-MM', signature: 'data:image/png;base64,...' }
 router.post("/students/:studentId/certify", async (req, res) => {
-  const { month } = req.body;
+  const { month, signature } = req.body;
   if (!month) {
     return res.status(400).json({ error: "month (YYYY-MM) is required." });
+  }
+  if (!signature) {
+    return res
+      .status(400)
+      .json({ error: "A signature is required to certify this DTR." });
   }
 
   try {
@@ -57,6 +62,7 @@ router.post("/students/:studentId/certify", async (req, res) => {
       req.params.studentId,
       month,
       req.user.userId,
+      signature,
     );
     res.json(result);
   } catch (err) {

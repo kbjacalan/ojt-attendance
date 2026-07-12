@@ -28,10 +28,10 @@ export const listMyStudents = (date) =>
 export const getStudentDTR = (studentId, month) =>
   request(`/incharge/students/${studentId}/dtr?month=${month}`);
 
-export const certifyDTR = (studentId, month) =>
+export const certifyDTR = (studentId, month, signature) =>
   request(`/incharge/students/${studentId}/certify`, {
     method: "POST",
-    body: JSON.stringify({ month }),
+    body: JSON.stringify({ month, signature }),
   });
 
 export const uncertifyDTR = (studentId, month) =>

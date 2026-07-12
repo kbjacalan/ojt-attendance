@@ -145,7 +145,7 @@ export default function DTRView() {
               DAILY TIME RECORD
             </h1>
 
-            <div className="text-sm space-y-1 mb-4">
+            <div className="text-xs space-y-1 mb-4">
               <div className="flex gap-2">
                 <span className="shrink-0">Name:</span>
                 <span className="border-b border-slate-800 flex-1 px-1">
@@ -213,6 +213,7 @@ export default function DTRView() {
                   <DTRRow
                     key={row.day}
                     row={row}
+                    signature={dtr.certification?.signature}
                     onViewRemarks={() => setViewingRemarks(row)}
                   />
                 ))}
@@ -234,7 +235,7 @@ export default function DTRView() {
             </table>
 
             {/* Certification */}
-            <p className="text-[11px] mt-4 leading-snug">
+            <p className="text-xs mt-4 leading-snug">
               I certify on my honor that the above is a true and correct report
               of the hours of work performed, which was made daily at the time
               of IN and OUT from office.
@@ -242,14 +243,32 @@ export default function DTRView() {
 
             <div className="flex justify-between mt-10 text-[11px]">
               <div className="text-center w-[45%]">
-                <div className="border-b border-slate-800 mb-1 px-1 text-[11px] font-bold uppercase">
+                <div className="h-9 mb-1 px-1 flex items-end justify-center">
+                  {"\u00A0"}
+                </div>
+                <div className="border-b border-slate-800 mb-1 px-1 text-xs font-bold uppercase">
                   {dtr.student.name}
                 </div>
                 STUDENT TRAINEE
               </div>
               <div className="text-center w-[45%]">
-                <div className="border-b border-slate-800 mb-1 px-1 text-[11px] font-bold uppercase">
-                  {dtr.student.inChargeName || "\u00A0"}
+                <div className="h-9 mb-1 px-1 flex items-end justify-center">
+                  {dtr.certification?.status === "certified" &&
+                  dtr.certification?.signature ? (
+                    <img
+                      src={dtr.certification.signature}
+                      alt="In-charge signature"
+                      className="h-9 w-auto max-w-full object-contain translate-y-2"
+                    />
+                  ) : (
+                    "\u00A0"
+                  )}
+                </div>
+                <div className="border-b border-slate-800 mb-1 px-1 text-xs font-bold uppercase">
+                  {(dtr.certification?.status === "certified" &&
+                    dtr.certification?.certifiedByName) ||
+                    dtr.student.inChargeName ||
+                    "\u00A0"}
                 </div>
                 IN-CHARGE
               </div>
@@ -269,7 +288,7 @@ export default function DTRView() {
   );
 }
 
-function DTRRow({ row, onViewRemarks }) {
+function DTRRow({ row, signature, onViewRemarks }) {
   const cellClass = "border border-slate-800 px-1 py-0.5 text-center";
 
   if (row.status === "weekend") {
@@ -362,7 +381,16 @@ function DTRRow({ row, onViewRemarks }) {
       <td className={`${cellClass} font-medium`}>
         {row.totalHours.toFixed(2)}
       </td>
-      <td className={`${cellClass} text-[10px]`}>{row.certifiedBy}</td>
+      <td className={cellClass}>
+        {row.certifiedBy && signature ? (
+          <img
+            src={signature}
+            alt={`Certified by ${row.certifiedBy}`}
+            title={row.certifiedBy}
+            className="h-4 w-auto max-w-full mx-auto object-contain"
+          />
+        ) : null}
+      </td>
     </tr>
   );
 }

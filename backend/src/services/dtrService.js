@@ -14,9 +14,10 @@ class DTRError extends Error {
  *
  * Returns:
  * {
- *   student: { name, course, agency, officialHours, month, inChargeName },
+ *   student: { name, course, agency, officialHours, requiredHours, month, inChargeName },
  *   days: [ { day, status, amIn, amOut, pmIn, pmOut, otIn, otOut, totalHours, certifiedBy } ],
- *   grandTotal: number
+ *   grandTotal: number,
+ *   certification: { status, certifiedAt, certifiedByName, signature, totalHours }
  * }
  */
 async function getMonthlyDTR(studentId, monthStr) {
@@ -25,8 +26,8 @@ async function getMonthlyDTR(studentId, monthStr) {
   }
 
   const studentResult = await pool.query(
-    `SELECT u.full_name, sp.course, sp.official_hours_text, a.name AS agency_name,
-            ic.full_name AS in_charge_name
+    `SELECT u.full_name, sp.course, sp.official_hours_text, sp.required_hours,
+            a.name AS agency_name, ic.full_name AS in_charge_name
      FROM student_profiles sp
      JOIN users u ON u.id = sp.user_id
      LEFT JOIN agencies a ON a.id = sp.agency_id
@@ -53,6 +54,16 @@ async function getMonthlyDTR(studentId, monthStr) {
      ORDER BY log_date ASC`,
     [studentId, monthStart, monthEnd],
   );
+
+  const periodResult = await pool.query(
+    `SELECT dp.status, dp.certified_at, dp.total_hours, dp.signature,
+            cu.full_name AS certified_by_name
+     FROM dtr_periods dp
+     LEFT JOIN users cu ON cu.id = dp.certified_by
+     WHERE dp.student_id = $1 AND dp.period_month = $2`,
+    [studentId, monthStart],
+  );
+  const certRow = periodResult.rows[0];
 
   const holidaysResult = await pool.query(
     `SELECT holiday_date, name FROM holidays WHERE holiday_date BETWEEN $1 AND $2`,
@@ -122,11 +133,30 @@ async function getMonthlyDTR(studentId, monthStr) {
       course: student.course,
       agency: student.agency_name || "Unassigned",
       officialHours: student.official_hours_text || "",
+      requiredHours: parseFloat(student.required_hours) || 0,
       month: formatMonthLabel(monthStr),
       inChargeName: student.in_charge_name || "",
     },
     days,
     grandTotal: Math.round(grandTotal * 100) / 100,
+    certification: certRow
+      ? {
+          status: certRow.status,
+          certifiedAt: certRow.certified_at,
+          certifiedByName: certRow.certified_by_name || "",
+          signature: certRow.signature || null,
+          totalHours:
+            certRow.total_hours !== null
+              ? parseFloat(certRow.total_hours)
+              : null,
+        }
+      : {
+          status: "draft",
+          certifiedAt: null,
+          certifiedByName: "",
+          signature: null,
+          totalHours: null,
+        },
   };
 }
 
