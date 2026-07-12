@@ -461,7 +461,7 @@ export default function Students() {
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             <FilterSelect
               label="University"
               value={universityFilter}
@@ -491,28 +491,34 @@ export default function Students() {
               />
             )}
 
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="text-xs text-slate-500 hover:text-slate-700 underline"
-              >
-                Clear filters
-              </button>
-            )}
+            <div className="col-span-2 flex items-center justify-between gap-2 sm:contents">
+              {hasActiveFilters ? (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs text-slate-500 hover:text-slate-700 underline shrink-0"
+                >
+                  Clear filters
+                </button>
+              ) : (
+                <span className="sm:hidden" />
+              )}
 
-            <div className="w-full flex items-center gap-1.5 text-xs sm:text-sm sm:w-auto sm:ml-auto">
-              <span className="text-slate-500 shrink-0">Sort by:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="flex-1 sm:flex-none rounded-lg border border-slate-300 px-2 py-1.5 text-xs sm:text-sm"
-              >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-1.5 text-xs sm:text-sm min-w-0 sm:ml-auto">
+                <span className="text-slate-500 hidden sm:inline shrink-0">
+                  Sort by:
+                </span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="rounded-lg border border-slate-300 pl-2 pr-1 py-1.5 text-xs sm:text-sm min-w-0 max-w-[160px] sm:max-w-none"
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -627,7 +633,7 @@ function FilterSelect({ label, value, onChange, options, optionLabels }) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`rounded-lg border px-3 py-1.5 text-xs sm:text-sm ${
+      className={`w-full sm:w-auto rounded-lg border px-2 sm:px-3 py-1.5 text-xs sm:text-sm truncate ${
         value === "all"
           ? "border-slate-300 text-slate-600"
           : "border-caap-blue text-caap-navy bg-caap-blue/5 font-medium"
