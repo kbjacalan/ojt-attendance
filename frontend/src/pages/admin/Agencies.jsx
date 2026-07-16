@@ -353,7 +353,7 @@ function AgencyForm({ staff, agency, onClose, onCreated }) {
       longitude: parseFloat(form.longitude),
       radiusMeters: Math.min(
         1000,
-        Math.max(50, parseInt(form.radiusMeters, 10) || 50),
+        Math.max(10, parseInt(form.radiusMeters, 10) || 10),
       ),
       inChargeId: form.inChargeId || null,
     };
@@ -390,7 +390,7 @@ function AgencyForm({ staff, agency, onClose, onCreated }) {
       />
 
       <RadiusSlider
-        value={Number(form.radiusMeters) || 50}
+        value={Number(form.radiusMeters) || 10}
         onChange={(v) => setForm({ ...form, radiusMeters: v })}
       />
 
@@ -465,7 +465,7 @@ function AgencyForm({ staff, agency, onClose, onCreated }) {
 }
 
 function RadiusSlider({ value, onChange }) {
-  const MIN = 50;
+  const MIN = 10;
   const MAX = 1000;
   const clamped = Math.min(MAX, Math.max(MIN, value));
   // Position the live value bubble above the slider thumb
