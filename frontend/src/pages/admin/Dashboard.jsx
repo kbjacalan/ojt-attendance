@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Users, MapPin, CalendarDays, UserCog } from "lucide-react";
+import { Users, MapPin, CalendarDays, UserCog, UserCircle } from "lucide-react";
 
 export default function Dashboard() {
   return (
@@ -54,6 +54,17 @@ export default function Dashboard() {
             <h2 className="font-semibold text-slate-800">Holidays</h2>
             <p className="text-sm text-slate-500 mt-1">
               Manage the holiday calendar used in DTR generation.
+            </p>
+          </Link>
+
+          <Link
+            to="/admin/account"
+            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+          >
+            <UserCircle className="w-6 h-6 text-caap-blue mb-3" />
+            <h2 className="font-semibold text-slate-800">My Account</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              View your account info and change your password.
             </p>
           </Link>
         </div>

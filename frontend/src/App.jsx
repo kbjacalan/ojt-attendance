@@ -13,6 +13,7 @@ import AdminStudents from "./pages/admin/Students";
 import AdminAgencies from "./pages/admin/Agencies";
 import AdminHolidays from "./pages/admin/Holidays";
 import AdminStaff from "./pages/admin/Staff";
+import AdminAccount from "./pages/admin/Account";
 import StudentRecords from "./pages/incharge/StudentRecords";
 import StudentDTRReview from "./pages/incharge/StudentDTRReview";
 import AdminStudentDTRReview from "./pages/admin/StudentDTRReview";
@@ -106,6 +107,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminStaff />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/account"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminAccount />
               </ProtectedRoute>
             }
           />

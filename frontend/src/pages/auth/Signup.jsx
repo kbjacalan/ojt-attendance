@@ -1,47 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LoaderCircle, UserPlus, CheckCircle2, Check, X } from "lucide-react";
-import { signupRequest } from "../../services/authApi";
+import { signupRequest, listPublicAgencies } from "../../services/authApi";
 import { formatBatchLabel, getCurrentBatchValue } from "../../utils/batch";
+import { buildOfficialHoursText } from "../../utils/officialHours";
 import PasswordInput from "../../components/common/PasswordInput";
+import AgencySelect from "../../components/common/AgencySelect";
+import OfficialHoursFields from "../../components/common/OfficialHoursFields";
 import caapLogo from "../../assets/caap_logo.png";
 
 const MIN_PASSWORD_LENGTH = 8;
-
-/** Converts "HH:MM" 24-hour string to "h:mm AM/PM" for the Official Hours preview. */
-function to12Hour(time24) {
-  if (!time24) return "";
-  const [hStr, mStr] = time24.split(":");
-  let h = parseInt(hStr, 10);
-  const m = mStr || "00";
-  const period = h >= 12 ? "PM" : "AM";
-  h = h % 12;
-  if (h === 0) h = 12;
-  return `${h}:${m} ${period}`;
-}
-
-/**
- * Builds the free-text "Official Hours" string shown on the DTR from
- * the four granular time-in/time-out picks (morning + afternoon).
- * Any block left blank is simply omitted from the summary.
- */
-function buildOfficialHoursText({
-  morningIn,
-  morningOut,
-  afternoonIn,
-  afternoonOut,
-}) {
-  const parts = [];
-  if (morningIn && morningOut) {
-    parts.push(`Morning: ${to12Hour(morningIn)} - ${to12Hour(morningOut)}`);
-  }
-  if (afternoonIn && afternoonOut) {
-    parts.push(
-      `Afternoon: ${to12Hour(afternoonIn)} - ${to12Hour(afternoonOut)}`,
-    );
-  }
-  return parts.join("  |  ");
-}
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -54,15 +22,23 @@ export default function Signup() {
     course: "",
     university: "",
     batch: getCurrentBatchValue(),
+    agencyId: "",
     requiredHours: "",
     morningIn: "08:00",
     morningOut: "12:00",
     afternoonIn: "13:00",
     afternoonOut: "17:00",
   });
+  const [agencies, setAgencies] = useState([]);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    listPublicAgencies()
+      .then(setAgencies)
+      .catch(() => setAgencies([]));
+  }, []);
 
   const officialHoursPreview = buildOfficialHoursText(form);
 
@@ -98,6 +74,10 @@ export default function Signup() {
       setError("Please select your OJT batch (month and year).");
       return;
     }
+    if (!form.agencyId) {
+      setError("Please select your OJT agency.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -108,6 +88,7 @@ export default function Signup() {
         course: form.course,
         university: form.university || null,
         batch: form.batch,
+        agencyId: form.agencyId,
         requiredHours: form.requiredHours || null,
         officialHoursText: officialHoursPreview || null,
       });
@@ -251,6 +232,17 @@ export default function Signup() {
               </p>
             </div>
 
+            <AgencySelect
+              id="signup-agency"
+              variant="spacious"
+              value={form.agencyId}
+              onChange={(v) => setForm({ ...form, agencyId: v })}
+              agencies={agencies}
+              required
+              disabled={submitting}
+              helperText="The host agency where you'll render your OJT hours."
+            />
+
             <div>
               <label
                 htmlFor="signup-requiredHours"
@@ -278,48 +270,12 @@ export default function Signup() {
               </p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Official Hours{" "}
-                <span className="text-slate-400 font-normal">(optional)</span>
-              </label>
-              <p className="text-xs text-slate-400 mb-2">
-                Your regular time in/out, this will automatically show up in the
-                Official Hours section of your DTR. Adjust if your OJT hours are
-                different.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <TimeField
-                  label="Morning Time In"
-                  value={form.morningIn}
-                  onChange={(v) => setForm({ ...form, morningIn: v })}
-                  disabled={submitting}
-                />
-                <TimeField
-                  label="Morning Time Out"
-                  value={form.morningOut}
-                  onChange={(v) => setForm({ ...form, morningOut: v })}
-                  disabled={submitting}
-                />
-                <TimeField
-                  label="Afternoon Time In"
-                  value={form.afternoonIn}
-                  onChange={(v) => setForm({ ...form, afternoonIn: v })}
-                  disabled={submitting}
-                />
-                <TimeField
-                  label="Afternoon Time Out"
-                  value={form.afternoonOut}
-                  onChange={(v) => setForm({ ...form, afternoonOut: v })}
-                  disabled={submitting}
-                />
-              </div>
-              {officialHoursPreview && (
-                <p className="text-xs text-slate-500 mt-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
-                  Preview: {officialHoursPreview}
-                </p>
-              )}
-            </div>
+            <OfficialHoursFields
+              variant="spacious"
+              value={form}
+              onChange={(v) => setForm({ ...form, ...v })}
+              disabled={submitting}
+            />
           </FormSection>
 
           <FormSection title="Account">
@@ -469,23 +425,6 @@ function FormSection({ title, children }) {
         {title}
       </p>
       {children}
-    </div>
-  );
-}
-
-function TimeField({ label, value, onChange, disabled }) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-slate-600 mb-1">
-        {label}
-      </label>
-      <input
-        type="time"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
-      />
     </div>
   );
 }

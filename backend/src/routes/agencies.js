@@ -10,6 +10,23 @@ const {
   AgencyError,
 } = require("../services/agencyService");
 
+/**
+ * GET /api/agencies/public — unauthenticated, minimal agency list
+ * (id + name only) for the student signup form's Agency dropdown.
+ * Must stay above the authenticate/requireRole gate below since this
+ * is the only agency endpoint reachable before login. All agencies are
+ * considered "active" — this app has no separate inactive/archived
+ * state for agencies.
+ */
+router.get("/public", async (req, res) => {
+  try {
+    const agencies = await listAgencies();
+    res.json(agencies.map((a) => ({ id: a.id, name: a.name })));
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
 router.use(authenticate, requireRole("admin"));
 
 router.get("/", async (req, res) => {

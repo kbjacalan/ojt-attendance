@@ -32,7 +32,13 @@ import {
 } from "../../services/adminApi";
 import DutyStatusBadge from "../../components/common/DutyStatusBadge";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import AgencySelect from "../../components/common/AgencySelect";
+import OfficialHoursFields from "../../components/common/OfficialHoursFields";
 import { formatBatchLabel } from "../../utils/batch";
+import {
+  parseOfficialHoursText,
+  buildOfficialHoursText,
+} from "../../utils/officialHours";
 
 const OJT_STATUS_LABELS = {
   pending: "Pending",
@@ -174,15 +180,6 @@ export default function Students() {
     setSelectedDate(
       `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, "0")}-${String(newDate.getDate()).padStart(2, "0")}`,
     );
-  }
-
-  async function handleAgencyChange(studentId, agencyId) {
-    try {
-      await updateStudentProfile(studentId, { agencyId: agencyId || null });
-      loadData(selectedDate);
-    } catch (err) {
-      alert(err.message);
-    }
   }
 
   async function handleToggleActive(userId, currentStatus) {
@@ -612,8 +609,6 @@ export default function Students() {
                 onToggle={() => toggleBatch(batchName)}
                 isToday={isToday}
                 selectedDate={selectedDate}
-                agencies={agencies}
-                onAgencyChange={handleAgencyChange}
                 onApprove={handleApprove}
                 onReject={handleReject}
                 onEdit={setEditingStudent}
@@ -687,8 +682,6 @@ function BatchGroup({
   onToggle,
   isToday,
   selectedDate,
-  agencies,
-  onAgencyChange,
   onApprove,
   onReject,
   onEdit,
@@ -790,24 +783,8 @@ function BatchGroup({
                     <td className="px-2 py-1.5 text-slate-600 truncate">
                       <Truncate text={s.course || "—"} />
                     </td>
-                    <td className="px-2 py-1.5">
-                      <div className="relative">
-                        <select
-                          value={s.agency_id || ""}
-                          onChange={(e) =>
-                            onAgencyChange(s.student_id, e.target.value)
-                          }
-                          className="w-full appearance-none rounded-lg border border-slate-300 pl-1.5 pr-5 py-1 text-xs truncate"
-                        >
-                          <option value="">Unassigned</option>
-                          {agencies.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.name}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
-                      </div>
+                    <td className="px-2 py-1.5 text-slate-600">
+                      <Truncate text={s.agency_name || "Unassigned"} />
                     </td>
                     <td className="px-2 py-1.5 truncate">
                       <DutyStatusBadge
@@ -926,8 +903,6 @@ function BatchGroup({
                 student={s}
                 isToday={isToday}
                 selectedDate={selectedDate}
-                agencies={agencies}
-                onAgencyChange={onAgencyChange}
                 onApprove={onApprove}
                 onReject={onReject}
                 onEdit={onEdit}
@@ -951,8 +926,6 @@ function StudentCard({
   student: s,
   isToday,
   selectedDate,
-  agencies,
-  onAgencyChange,
   onApprove,
   onReject,
   onEdit,
@@ -1022,24 +995,13 @@ function StudentCard({
           />
         </div>
         <div className="col-span-2 min-w-0">
-          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1">
+          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
             Agency
           </p>
-          <div className="relative">
-            <select
-              value={s.agency_id || ""}
-              onChange={(e) => onAgencyChange(s.student_id, e.target.value)}
-              className="w-full appearance-none rounded-lg border border-slate-300 pl-2 pr-6 py-1.5 text-xs"
-            >
-              <option value="">Unassigned</option>
-              {agencies.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
-          </div>
+          <Truncate
+            className="text-slate-600"
+            text={s.agency_name || "Unassigned"}
+          />
         </div>
         <div className="col-span-2 min-w-0">
           <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1">
@@ -1233,23 +1195,12 @@ function StudentForm({ agencies, onClose, onCreated }) {
           </p>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">
-            Agency
-          </label>
-          <select
-            value={form.agencyId}
-            onChange={(e) => setForm({ ...form, agencyId: e.target.value })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">Unassigned</option>
-            {agencies.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <AgencySelect
+          id="new-student-agency"
+          value={form.agencyId}
+          onChange={(v) => setForm({ ...form, agencyId: v })}
+          agencies={agencies}
+        />
       </div>
 
       {error && <div className="text-sm text-red-600">{error}</div>}
@@ -1289,6 +1240,7 @@ function EditStudentForm({ student, agencies, onClose, onSaved }) {
     ojtStatus: student.ojt_status || "active",
     agencyId: student.agency_id || "",
     requiredHours: student.required_hours || 486,
+    ...parseOfficialHoursText(student.official_hours_text),
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -1308,6 +1260,7 @@ function EditStudentForm({ student, agencies, onClose, onSaved }) {
         ojtStatus: form.ojtStatus,
         agencyId: form.agencyId || null,
         requiredHours: parseFloat(form.requiredHours),
+        officialHoursText: buildOfficialHoursText(form) || null,
       });
       onSaved();
     } catch (err) {
@@ -1383,22 +1336,19 @@ function EditStudentForm({ student, agencies, onClose, onSaved }) {
           </p>
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">
-            Agency
-          </label>
-          <select
-            value={form.agencyId}
-            onChange={(e) => setForm({ ...form, agencyId: e.target.value })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">Unassigned</option>
-            {agencies.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
+        <AgencySelect
+          id="edit-student-agency"
+          value={form.agencyId}
+          onChange={(v) => setForm({ ...form, agencyId: v })}
+          agencies={agencies}
+        />
+
+        <div className="sm:col-span-2">
+          <OfficialHoursFields
+            value={form}
+            onChange={(v) => setForm({ ...form, ...v })}
+            disabled={submitting}
+          />
         </div>
       </div>
 

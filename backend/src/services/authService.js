@@ -91,6 +91,37 @@ async function hashPassword(plainPassword) {
   return bcrypt.hash(plainPassword, SALT_ROUNDS);
 }
 
+/**
+ * Self-service password change for any authenticated user (student,
+ * in-charge, or admin). Requires the current password to be re-verified
+ * before setting the new one — this is a security-sensitive action,
+ * so it deliberately doesn't trust the JWT alone the way most other
+ * "am I allowed to do this" checks in the app do.
+ */
+async function changePassword(userId, currentPassword, newPassword) {
+  const { rows } = await pool.query(
+    `SELECT password_hash FROM users WHERE id = $1`,
+    [userId],
+  );
+  if (rows.length === 0) {
+    throw new AuthError("User not found.", 404);
+  }
+
+  const passwordMatches = await bcrypt.compare(
+    currentPassword,
+    rows[0].password_hash,
+  );
+  if (!passwordMatches) {
+    throw new AuthError("Current password is incorrect.", 401);
+  }
+
+  const newHash = await hashPassword(newPassword);
+  await pool.query(
+    `UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2`,
+    [newHash, userId],
+  );
+}
+
 function verifyToken(token) {
   try {
     return jwt.verify(token, JWT_SECRET);
@@ -99,4 +130,10 @@ function verifyToken(token) {
   }
 }
 
-module.exports = { login, hashPassword, verifyToken, AuthError };
+module.exports = {
+  login,
+  hashPassword,
+  changePassword,
+  verifyToken,
+  AuthError,
+};

@@ -24,6 +24,7 @@ export async function signupRequest({
   course,
   university,
   batch,
+  agencyId,
   requiredHours,
   officialHoursText,
 }) {
@@ -37,6 +38,7 @@ export async function signupRequest({
       course,
       university,
       batch,
+      agencyId,
       requiredHours,
       officialHoursText,
     }),
@@ -49,4 +51,47 @@ export async function signupRequest({
   }
 
   return data; // { message, email }
+}
+
+/**
+ * Public, unauthenticated agency list for the signup page's Agency
+ * dropdown — unlike adminApi's listAgencies, this doesn't require a
+ * login token and only returns the minimal id/name fields.
+ */
+export async function listPublicAgencies() {
+  const res = await fetch(`${API_BASE_URL}/agencies/public`);
+  const data = await res.json().catch(() => []);
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to load agencies.");
+  }
+
+  return data; // [{ id, name }]
+}
+
+/**
+ * Self-service password change for the currently logged-in user
+ * (any role). Unlike the other functions in this file, this one is
+ * authenticated, so it attaches the stored token the same way
+ * adminApi/inchargeApi do.
+ */
+export async function changePasswordRequest(currentPassword, newPassword) {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to change password.");
+  }
+
+  return data; // { message }
 }

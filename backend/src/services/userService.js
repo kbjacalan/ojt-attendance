@@ -71,6 +71,20 @@ async function createUser({
       studentProfile = profileResult.rows[0];
     }
 
+    // In-charge accounts don't have their own agency column — the
+    // relationship lives on agencies.in_charge_id instead — so an
+    // agency picked while creating an in-charge is applied by pointing
+    // that agency's in_charge_id back at the new account.
+    if (role === "in_charge" && agencyId) {
+      const agencyResult = await client.query(
+        `UPDATE agencies SET in_charge_id = $1 WHERE id = $2 RETURNING id`,
+        [user.id, agencyId],
+      );
+      if (agencyResult.rows.length === 0) {
+        throw new UserError("Selected agency not found.", 400);
+      }
+    }
+
     await client.query("COMMIT");
 
     return { user, studentProfile };
@@ -79,6 +93,10 @@ async function createUser({
     if (err.code === "23505") {
       // unique_violation — email already exists
       throw new UserError("An account with this email already exists.", 409);
+    }
+    if (err.code === "23503") {
+      // foreign_key_violation — e.g. agencyId that doesn't exist
+      throw new UserError("Selected agency not found.", 400);
     }
     throw err;
   } finally {
@@ -191,7 +209,8 @@ async function listStudents(dateStr) {
 async function listStaff() {
   const { rows } = await pool.query(
     `SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.created_at,
-            STRING_AGG(a.name, ', ' ORDER BY a.name) AS agency_names
+            STRING_AGG(a.name, ', ' ORDER BY a.name) AS agency_names,
+            (ARRAY_AGG(a.id ORDER BY a.name))[1] AS agency_id
      FROM users u
      LEFT JOIN agencies a ON a.in_charge_id = u.id
      WHERE u.role IN ('in_charge', 'admin')
@@ -393,11 +412,19 @@ async function setUserActiveStatus(userId, isActive) {
 }
 
 /**
- * Updates an in-charge account's name/email. Deliberately scoped to
- * role = 'in_charge' in the WHERE clause so this endpoint can never be
- * used to edit an admin account by guessing/passing a different userId.
+ * Updates an in-charge account's name/email/assigned agency. Deliberately
+ * scoped to role = 'in_charge' in the WHERE clause so this endpoint can
+ * never be used to edit an admin account by guessing/passing a different
+ * userId.
+ *
+ * agencyId works the same way it does on the Agencies page's in-charge
+ * selector, just from the other direction: since the relationship lives
+ * on agencies.in_charge_id rather than on the user, passing agencyId
+ * first clears whatever agency currently points at this in-charge, then
+ * (if agencyId is truthy) points the newly selected agency at them.
+ * Passing agencyId: null (or omitting it) simply unassigns.
  */
-async function updateStaffAccount(userId, { fullName, email }) {
+async function updateStaffAccount(userId, { fullName, email, agencyId }) {
   const setClauses = [];
   const values = [];
   let idx = 1;
@@ -411,28 +438,65 @@ async function updateStaffAccount(userId, { fullName, email }) {
     values.push(email.toLowerCase().trim());
   }
 
-  if (setClauses.length === 0) {
+  if (setClauses.length === 0 && agencyId === undefined) {
     throw new UserError("Nothing to update.", 400);
   }
 
-  values.push(userId);
-
+  const client = await pool.connect();
   try {
-    const { rows } = await pool.query(
-      `UPDATE users SET ${setClauses.join(", ")}, updated_at = now()
-       WHERE id = $${idx} AND role = 'in_charge'
-       RETURNING id, email, full_name, role, is_active`,
-      values,
-    );
-    if (rows.length === 0) {
-      throw new UserError("In-charge account not found.", 404);
+    await client.query("BEGIN");
+
+    let updatedUser;
+    if (setClauses.length > 0) {
+      values.push(userId);
+      const { rows } = await client.query(
+        `UPDATE users SET ${setClauses.join(", ")}, updated_at = now()
+         WHERE id = $${idx} AND role = 'in_charge'
+         RETURNING id, email, full_name, role, is_active`,
+        values,
+      );
+      if (rows.length === 0) {
+        throw new UserError("In-charge account not found.", 404);
+      }
+      updatedUser = rows[0];
+    } else {
+      const { rows } = await client.query(
+        `SELECT id, email, full_name, role, is_active FROM users
+         WHERE id = $1 AND role = 'in_charge'`,
+        [userId],
+      );
+      if (rows.length === 0) {
+        throw new UserError("In-charge account not found.", 404);
+      }
+      updatedUser = rows[0];
     }
-    return rows[0];
+
+    if (agencyId !== undefined) {
+      await client.query(
+        `UPDATE agencies SET in_charge_id = NULL WHERE in_charge_id = $1`,
+        [userId],
+      );
+      if (agencyId) {
+        const agencyResult = await client.query(
+          `UPDATE agencies SET in_charge_id = $1 WHERE id = $2 RETURNING id`,
+          [userId, agencyId],
+        );
+        if (agencyResult.rows.length === 0) {
+          throw new UserError("Selected agency not found.", 400);
+        }
+      }
+    }
+
+    await client.query("COMMIT");
+    return updatedUser;
   } catch (err) {
+    await client.query("ROLLBACK");
     if (err.code === "23505") {
       throw new UserError("An account with this email already exists.", 409);
     }
     throw err;
+  } finally {
+    client.release();
   }
 }
 

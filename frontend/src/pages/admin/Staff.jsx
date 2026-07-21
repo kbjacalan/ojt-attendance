@@ -5,11 +5,14 @@ import {
   createUser,
   updateStaffAccount,
   deleteStaffAccount,
+  listAgencies,
 } from "../../services/adminApi";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import AgencySelect from "../../components/common/AgencySelect";
 
 export default function Staff() {
   const [staff, setStaff] = useState([]);
+  const [agencies, setAgencies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -23,10 +26,14 @@ export default function Staff() {
   async function loadStaff() {
     setLoading(true);
     try {
-      const data = await listStaff();
+      const [data, agenciesData] = await Promise.all([
+        listStaff(),
+        listAgencies(),
+      ]);
       // Only in-charge accounts are managed here — admin accounts are
       // not editable/deletable through this page to avoid lockout risk.
       setStaff(data.filter((s) => s.role === "in_charge"));
+      setAgencies(agenciesData);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -76,6 +83,7 @@ export default function Staff() {
 
         {showForm && (
           <StaffForm
+            agencies={agencies}
             onClose={() => setShowForm(false)}
             onCreated={() => {
               setShowForm(false);
@@ -87,6 +95,7 @@ export default function Staff() {
         {editingStaff && (
           <StaffForm
             staffMember={editingStaff}
+            agencies={agencies}
             onClose={() => setEditingStaff(null)}
             onCreated={() => {
               setEditingStaff(null);
@@ -208,12 +217,13 @@ export default function Staff() {
  * Handles both creating a new in-charge account and editing an
  * existing one. Pass `staffMember` to switch into edit mode.
  */
-function StaffForm({ staffMember, onClose, onCreated }) {
+function StaffForm({ staffMember, agencies, onClose, onCreated }) {
   const isEditing = Boolean(staffMember);
   const [form, setForm] = useState({
     fullName: staffMember?.full_name || "",
     email: staffMember?.email || "",
     password: "",
+    agencyId: staffMember?.agency_id || "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -228,6 +238,7 @@ function StaffForm({ staffMember, onClose, onCreated }) {
         await updateStaffAccount(staffMember.id, {
           fullName: form.fullName,
           email: form.email,
+          agencyId: form.agencyId || null,
         });
       } else {
         await createUser({
@@ -235,6 +246,7 @@ function StaffForm({ staffMember, onClose, onCreated }) {
           password: form.password,
           fullName: form.fullName,
           role: "in_charge",
+          agencyId: form.agencyId || null,
         });
       }
       onCreated();
@@ -277,6 +289,12 @@ function StaffForm({ staffMember, onClose, onCreated }) {
             type="password"
           />
         )}
+        <AgencySelect
+          id="staff-agency"
+          value={form.agencyId}
+          onChange={(v) => setForm({ ...form, agencyId: v })}
+          agencies={agencies}
+        />
       </div>
 
       {isEditing && (
