@@ -35,8 +35,6 @@ const SORT_OPTIONS = [
   { value: "name_desc", label: "Name (Z–A)" },
   { value: "university_asc", label: "University (A–Z)" },
   { value: "university_desc", label: "University (Z–A)" },
-  { value: "batch_asc", label: "Batch (Earliest–Latest)" },
-  { value: "batch_desc", label: "Batch (Latest–Earliest)" },
 ];
 
 function getTodayValue() {
@@ -60,10 +58,6 @@ function sortStudents(list, sortBy) {
         av = (a.university || "").toLowerCase();
         bv = (b.university || "").toLowerCase();
         break;
-      case "batch":
-        av = (a.batch || "").toLowerCase();
-        bv = (b.batch || "").toLowerCase();
-        break;
       default:
         av = bv = "";
     }
@@ -73,6 +67,42 @@ function sortStudents(list, sortBy) {
   });
 
   return sorted;
+}
+
+/**
+ * Comparator for batch group keys ("YYYY-MM" strings, or "Unassigned").
+ * Sorts newest-first (descending) so the most recently created batch
+ * always appears at the top of the list, with "Unassigned" always
+ * pinned to the end regardless of direction.
+ *
+ * Batches are stored as zero-padded "YYYY-MM" strings (see
+ * utils/batch.js), so plain string comparison is already chronological
+ * — the previous implementation compared a→b (ascending/oldest-first)
+ * instead of b→a, which is why newest batches weren't showing first.
+ */
+function compareBatchKeysDesc(a, b) {
+  if (a === "Unassigned") return 1;
+  if (b === "Unassigned") return -1;
+  return b.localeCompare(a);
+}
+
+/**
+ * Returns the batch key ("YYYY-MM") of the most recently created batch
+ * in a student list, ignoring "Unassigned" students unless there are no
+ * batches at all. Returns null for an empty list.
+ */
+function getLatestBatchKey(list) {
+  let latest = null;
+  let hasAny = false;
+  for (const s of list) {
+    hasAny = true;
+    const key = s.batch && s.batch.trim() ? s.batch : null;
+    if (key && (latest === null || key.localeCompare(latest) > 0)) {
+      latest = key;
+    }
+  }
+  if (latest !== null) return latest;
+  return hasAny ? "Unassigned" : null;
 }
 
 export default function StudentRecords() {
@@ -90,8 +120,9 @@ export default function StudentRecords() {
   const [courseFilter, setCourseFilter] = useState("all");
   const [sortBy, setSortBy] = useState("name_asc");
 
-  // Which batch groups are collapsed (collapsed = hidden). Empty by
-  // default so every batch starts expanded.
+  // Which batch groups are collapsed (collapsed = hidden). Starts empty
+  // and is populated by the "auto-expand latest batch" effect below
+  // once data loads, so only the newest batch starts expanded.
   const [collapsedBatches, setCollapsedBatches] = useState(() => new Set());
 
   const isToday = selectedDate === today;
@@ -100,15 +131,49 @@ export default function StudentRecords() {
     loadStudents(selectedDate);
   }, [selectedDate]);
 
-  async function loadStudents(date) {
-    setLoading(true);
+  // ----- Real-time updates -----
+  // There's no push/websocket channel from the backend, so we keep the
+  // list fresh by polling in the background and by refetching whenever
+  // the tab regains focus/visibility (e.g. an in-charge switches back
+  // to this tab after a new student/batch was added elsewhere). Both
+  // use the "silent" loadStudents path so they never flash the
+  // full-page loading spinner or clobber the UI with a transient error.
+  useEffect(() => {
+    const POLL_INTERVAL_MS = 15000;
+    const intervalId = setInterval(() => {
+      loadStudents(selectedDate, { silent: true });
+    }, POLL_INTERVAL_MS);
+
+    function handleFocusOrVisible() {
+      if (document.visibilityState === "hidden") return;
+      loadStudents(selectedDate, { silent: true });
+    }
+    document.addEventListener("visibilitychange", handleFocusOrVisible);
+    window.addEventListener("focus", handleFocusOrVisible);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleFocusOrVisible);
+      window.removeEventListener("focus", handleFocusOrVisible);
+    };
+  }, [selectedDate]);
+
+  async function loadStudents(date, { silent = false } = {}) {
+    if (!silent) setLoading(true);
     try {
       const data = await listMyStudents(date);
       setStudents(data);
+      if (!silent) setError(null);
     } catch (err) {
-      setError(err.message);
+      if (silent) {
+        // Don't disrupt the UI over a transient background-refresh
+        // failure — just log it and keep showing the last good data.
+        console.error("Background refresh failed:", err);
+      } else {
+        setError(err.message);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -209,13 +274,33 @@ export default function StudentRecords() {
       batchName,
       sortStudents(list, sortBy),
     ]);
-    entries.sort(([a], [b]) => {
-      if (a === "Unassigned") return 1;
-      if (b === "Unassigned") return -1;
-      return a.localeCompare(b);
-    });
+    entries.sort(([a], [b]) => compareBatchKeysDesc(a, b));
     return entries;
   }, [filteredStudents, sortBy]);
+
+  // Name of the most recently created batch, derived from the full
+  // (unfiltered) student list so that search/filter/sort selections
+  // never change which batch counts as "latest". Used to auto-expand
+  // only the newest batch by default.
+  const latestBatchKey = useMemo(() => getLatestBatchKey(students), [students]);
+
+  // Tracks the previously-known latest batch so we only reset the
+  // collapsed/expanded state when a genuinely *new* batch shows up,
+  // rather than on every background refresh or filter change — that
+  // would wipe out any batches the user manually expanded/collapsed.
+  const prevLatestBatchRef = useRef(null);
+  useEffect(() => {
+    if (latestBatchKey === null) return;
+    if (prevLatestBatchRef.current === latestBatchKey) return;
+    prevLatestBatchRef.current = latestBatchKey;
+
+    const allBatchKeys = new Set(
+      students.map((s) => (s.batch && s.batch.trim() ? s.batch : "Unassigned")),
+    );
+    // Collapse every batch except the latest one.
+    allBatchKeys.delete(latestBatchKey);
+    setCollapsedBatches(allBatchKeys);
+  }, [latestBatchKey, students]);
 
   function toggleBatch(batchName) {
     setCollapsedBatches((prev) => {
