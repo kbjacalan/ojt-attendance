@@ -27,6 +27,7 @@ async function createUser({
   university,
   batch,
   ojtStatus,
+  controlNumberId,
 }) {
   const client = await pool.connect();
 
@@ -54,9 +55,9 @@ async function createUser({
     if (role === "student") {
       const profileResult = await client.query(
         `INSERT INTO student_profiles
-           (user_id, course, agency_id, required_hours, official_hours_text, university, batch, ojt_status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id, course, agency_id, required_hours, official_hours_text, qr_token, university, batch, ojt_status`,
+           (user_id, course, agency_id, required_hours, official_hours_text, university, batch, ojt_status, control_number_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING id, course, agency_id, required_hours, official_hours_text, qr_token, university, batch, ojt_status, control_number_id`,
         [
           user.id,
           course || null,
@@ -66,6 +67,7 @@ async function createUser({
           university || null,
           batch || null,
           ojtStatus || "active",
+          controlNumberId || null,
         ],
       );
       studentProfile = profileResult.rows[0];
@@ -91,7 +93,14 @@ async function createUser({
   } catch (err) {
     await client.query("ROLLBACK");
     if (err.code === "23505") {
-      // unique_violation — email already exists
+      // unique_violation — could be the email or the control number,
+      // each already claimed by another account
+      if (err.constraint && err.constraint.includes("control_number")) {
+        throw new UserError(
+          "This control number is already assigned to another student.",
+          409,
+        );
+      }
       throw new UserError("An account with this email already exists.", 409);
     }
     if (err.code === "23503") {
@@ -176,11 +185,13 @@ async function listStudents(dateStr) {
             sp.id AS student_id, sp.course, sp.required_hours, sp.official_hours_text,
             sp.university, sp.batch, sp.ojt_status,
             a.id AS agency_id, a.name AS agency_name,
+            cn.id AS control_number_id, cn.control_number,
             al.am_time_in, al.am_time_out, al.pm_time_in, al.pm_time_out,
             al.ot_time_in, al.ot_time_out
      FROM users u
      JOIN student_profiles sp ON sp.user_id = u.id
      LEFT JOIN agencies a ON a.id = sp.agency_id
+     LEFT JOIN ojt_control_numbers cn ON cn.id = sp.control_number_id
      LEFT JOIN attendance_logs al ON al.student_id = sp.id AND al.log_date = $1
      WHERE u.role = 'student'
      ORDER BY u.full_name ASC`,
@@ -295,6 +306,10 @@ async function updateStudentProfile(studentId, updates) {
       profileSetClauses.push(`ojt_status = $${pIdx++}`);
       profileValues.push(updates.ojtStatus);
     }
+    if ("controlNumberId" in updates) {
+      profileSetClauses.push(`control_number_id = $${pIdx++}`);
+      profileValues.push(updates.controlNumberId);
+    }
 
     let updatedProfile;
     if (profileSetClauses.length > 0) {
@@ -330,6 +345,12 @@ async function updateStudentProfile(studentId, updates) {
   } catch (err) {
     await client.query("ROLLBACK");
     if (err.code === "23505") {
+      if (err.constraint && err.constraint.includes("control_number")) {
+        throw new UserError(
+          "This control number is already assigned to another student.",
+          409,
+        );
+      }
       throw new UserError("An account with this email already exists.", 409);
     }
     throw err;

@@ -27,6 +27,7 @@ export async function signupRequest({
   agencyId,
   requiredHours,
   officialHoursText,
+  controlNumberId,
 }) {
   const res = await fetch(`${API_BASE_URL}/auth/signup`, {
     method: "POST",
@@ -41,6 +42,7 @@ export async function signupRequest({
       agencyId,
       requiredHours,
       officialHoursText,
+      controlNumberId,
     }),
   });
 
@@ -67,6 +69,21 @@ export async function listPublicAgencies() {
   }
 
   return data; // [{ id, name }]
+}
+
+/**
+ * Public, unauthenticated list of control numbers not yet claimed by
+ * another student, for the signup page's OJT Control Number dropdown.
+ */
+export async function listPublicControlNumbers() {
+  const res = await fetch(`${API_BASE_URL}/control-numbers/public`);
+  const data = await res.json().catch(() => []);
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to load control numbers.");
+  }
+
+  return data; // [{ id, control_number }]
 }
 
 /**

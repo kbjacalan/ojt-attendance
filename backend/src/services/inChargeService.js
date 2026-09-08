@@ -22,11 +22,13 @@ async function listMyStudents(inChargeUserId, dateStr) {
     `SELECT sp.id AS student_id, u.full_name, u.email, sp.course,
             sp.university, sp.batch, sp.ojt_status,
             a.id AS agency_id, a.name AS agency_name,
+            cn.id AS control_number_id, cn.control_number,
             al.am_time_in, al.am_time_out, al.pm_time_in, al.pm_time_out,
             al.ot_time_in, al.ot_time_out
      FROM student_profiles sp
      JOIN users u ON u.id = sp.user_id
      JOIN agencies a ON a.id = sp.agency_id
+     LEFT JOIN ojt_control_numbers cn ON cn.id = sp.control_number_id
      LEFT JOIN attendance_logs al ON al.student_id = sp.id AND al.log_date = $2
      WHERE a.in_charge_id = $1
      ORDER BY u.full_name ASC`,

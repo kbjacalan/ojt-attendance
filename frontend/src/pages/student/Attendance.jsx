@@ -4,6 +4,7 @@ import {
   FileText,
   Building2,
   GraduationCap,
+  IdCard,
   LoaderCircle,
   AlertTriangle,
 } from "lucide-react";
@@ -247,6 +248,18 @@ export default function Attendance() {
                     <p className="text-slate-400 text-xs">Course</p>
                     <p className="font-medium text-slate-800 truncate">
                       {dtr.student.course || "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 col-span-2">
+                  <span className="shrink-0 w-8 h-8 rounded-full bg-caap-navy/10 flex items-center justify-center">
+                    <IdCard className="w-4 h-4 text-caap-navy" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-slate-400 text-xs">OJT Control No.</p>
+                    <p className="font-medium text-slate-800 truncate">
+                      {dtr.student.controlNumber || "—"}
                     </p>
                   </div>
                 </div>

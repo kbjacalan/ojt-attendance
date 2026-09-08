@@ -1,5 +1,12 @@
 import { Link } from "react-router-dom";
-import { Users, MapPin, CalendarDays, UserCog, UserCircle } from "lucide-react";
+import {
+  Users,
+  MapPin,
+  CalendarDays,
+  UserCog,
+  UserCircle,
+  Hash,
+} from "lucide-react";
 
 export default function Dashboard() {
   return (
@@ -32,6 +39,19 @@ export default function Dashboard() {
             <h2 className="font-semibold text-slate-800">Agencies</h2>
             <p className="text-sm text-slate-500 mt-1">
               Manage host agencies and geofence settings.
+            </p>
+          </Link>
+
+          <Link
+            to="/admin/control-numbers"
+            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+          >
+            <Hash className="w-6 h-6 text-caap-blue mb-3" />
+            <h2 className="font-semibold text-slate-800">
+              OJT Control Numbers
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Create and manage control numbers for trainees.
             </p>
           </Link>
 

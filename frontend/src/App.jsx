@@ -11,6 +11,7 @@ import DTRView from "./pages/student/DTRView";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminStudents from "./pages/admin/Students";
 import AdminAgencies from "./pages/admin/Agencies";
+import AdminControlNumbers from "./pages/admin/ControlNumbers";
 import AdminHolidays from "./pages/admin/Holidays";
 import AdminStaff from "./pages/admin/Staff";
 import AdminAccount from "./pages/admin/Account";
@@ -89,6 +90,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminAgencies />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/control-numbers"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <AdminControlNumbers />
               </ProtectedRoute>
             }
           />

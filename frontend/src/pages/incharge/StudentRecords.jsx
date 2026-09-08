@@ -576,10 +576,11 @@ function BatchGroup({
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-xs table-fixed">
               <colgroup>
-                <col style={{ width: "24%" }} />
                 <col style={{ width: "20%" }} />
-                <col style={{ width: "16%" }} />
-                <col style={{ width: "16%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "15%" }} />
                 <col style={{ width: "12%" }} />
                 <col style={{ width: "12%" }} />
               </colgroup>
@@ -588,6 +589,9 @@ function BatchGroup({
                   <th className="px-2 py-2 font-medium truncate">Name</th>
                   <th className="px-2 py-2 font-medium truncate">University</th>
                   <th className="px-2 py-2 font-medium truncate">Course</th>
+                  <th className="px-2 py-2 font-medium truncate">
+                    OJT Control No.
+                  </th>
                   <th className="px-2 py-2 font-medium truncate">
                     {isToday ? "Today" : selectedDate}
                   </th>
@@ -618,6 +622,9 @@ function BatchGroup({
                     </td>
                     <td className="px-2 py-1.5 text-slate-600 truncate">
                       <Truncate text={s.course || "—"} />
+                    </td>
+                    <td className="px-2 py-1.5 text-slate-600 truncate">
+                      <Truncate text={s.control_number || "—"} />
                     </td>
                     <td className="px-2 py-1.5 truncate">
                       <DutyStatusBadge
@@ -713,6 +720,12 @@ function StudentRecordCard({ student: s, isToday, selectedDate }) {
             Course
           </p>
           <Truncate className="text-slate-600" text={s.course || "—"} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
+            OJT Control No.
+          </p>
+          <Truncate className="text-slate-600" text={s.control_number || "—"} />
         </div>
         <div className="min-w-0">
           <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">

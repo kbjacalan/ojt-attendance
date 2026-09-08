@@ -72,6 +72,18 @@ export const updateAgency = (id, payload) =>
 export const deleteAgency = (id) =>
   request(`/agencies/${id}`, { method: "DELETE" });
 
+// ----- OJT Control Numbers -----
+export const listControlNumbers = () => request("/control-numbers");
+
+export const createControlNumber = (payload) =>
+  request("/control-numbers", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+export const deleteControlNumber = (id) =>
+  request(`/control-numbers/${id}`, { method: "DELETE" });
+
 // ----- Holidays -----
 export const listHolidays = (year) =>
   request(year ? `/holidays?year=${year}` : "/holidays");

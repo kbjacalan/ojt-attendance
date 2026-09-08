@@ -29,10 +29,12 @@ import {
   rejectStudent,
   setUserActiveStatus,
   listAgencies,
+  listControlNumbers,
 } from "../../services/adminApi";
 import DutyStatusBadge from "../../components/common/DutyStatusBadge";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import AgencySelect from "../../components/common/AgencySelect";
+import ControlNumberSelect from "../../components/common/ControlNumberSelect";
 import OfficialHoursFields from "../../components/common/OfficialHoursFields";
 import { formatBatchLabel } from "../../utils/batch";
 import {
@@ -140,6 +142,7 @@ export default function Students() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [students, setStudents] = useState([]);
   const [agencies, setAgencies] = useState([]);
+  const [controlNumbers, setControlNumbers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -219,12 +222,15 @@ export default function Students() {
   async function loadData(date, { silent = false } = {}) {
     if (!silent) setLoading(true);
     try {
-      const [studentsData, agenciesData] = await Promise.all([
-        listStudents(date),
-        listAgencies(),
-      ]);
+      const [studentsData, agenciesData, controlNumbersData] =
+        await Promise.all([
+          listStudents(date),
+          listAgencies(),
+          listControlNumbers(),
+        ]);
       setStudents(studentsData);
       setAgencies(agenciesData);
+      setControlNumbers(controlNumbersData);
       if (!silent) setError(null);
     } catch (err) {
       if (silent) {
@@ -610,6 +616,7 @@ export default function Students() {
           {showForm && (
             <StudentForm
               agencies={agencies}
+              controlNumbers={controlNumbers}
               onClose={() => setShowForm(false)}
               onCreated={() => {
                 setShowForm(false);
@@ -622,6 +629,7 @@ export default function Students() {
             <EditStudentForm
               student={editingStudent}
               agencies={agencies}
+              controlNumbers={controlNumbers}
               onClose={() => setEditingStudent(null)}
               onSaved={() => {
                 setEditingStudent(null);
@@ -820,14 +828,15 @@ function BatchGroup({
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-xs table-fixed">
               <colgroup>
-                <col style={{ width: "17%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "7%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "12%" }} />
                 <col style={{ width: "14%" }} />
-                <col style={{ width: "9%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "8%" }} />
-                <col style={{ width: "8%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "6%" }} />
                 <col style={{ width: "8%" }} />
               </colgroup>
               <thead className="bg-slate-50 text-slate-500 text-left border-t border-slate-100">
@@ -836,6 +845,9 @@ function BatchGroup({
                   <th className="px-2 py-2 font-medium truncate">University</th>
                   <th className="px-2 py-2 font-medium truncate">Course</th>
                   <th className="px-2 py-2 font-medium truncate">Agency</th>
+                  <th className="px-2 py-2 font-medium truncate">
+                    OJT Control No.
+                  </th>
                   <th className="px-2 py-2 font-medium truncate">
                     {isToday ? "Today" : selectedDate}
                   </th>
@@ -871,6 +883,9 @@ function BatchGroup({
                     </td>
                     <td className="px-2 py-1.5 text-slate-600">
                       <Truncate text={s.agency_name || "Unassigned"} />
+                    </td>
+                    <td className="px-2 py-1.5 text-slate-600">
+                      <Truncate text={s.control_number || "—"} />
                     </td>
                     <td className="px-2 py-1.5 truncate">
                       <DutyStatusBadge
@@ -1090,6 +1105,12 @@ function StudentCard({
           />
         </div>
         <div className="col-span-2 min-w-0">
+          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
+            OJT Control No.
+          </p>
+          <Truncate className="text-slate-600" text={s.control_number || "—"} />
+        </div>
+        <div className="col-span-2 min-w-0">
           <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1">
             Account
           </p>
@@ -1166,7 +1187,7 @@ function StudentCard({
   );
 }
 
-function StudentForm({ agencies, onClose, onCreated }) {
+function StudentForm({ agencies, controlNumbers, onClose, onCreated }) {
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -1176,10 +1197,14 @@ function StudentForm({ agencies, onClose, onCreated }) {
     batch: "",
     ojtStatus: "active",
     agencyId: "",
+    controlNumberId: "",
     requiredHours: 486,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  // Only offer control numbers not already claimed by another student.
+  const availableControlNumbers = controlNumbers.filter((cn) => !cn.student_id);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -1197,6 +1222,7 @@ function StudentForm({ agencies, onClose, onCreated }) {
         batch: form.batch || null,
         ojtStatus: form.ojtStatus,
         agencyId: form.agencyId || null,
+        controlNumberId: form.controlNumberId || null,
         requiredHours: parseFloat(form.requiredHours),
       });
       onCreated();
@@ -1287,6 +1313,13 @@ function StudentForm({ agencies, onClose, onCreated }) {
           onChange={(v) => setForm({ ...form, agencyId: v })}
           agencies={agencies}
         />
+
+        <ControlNumberSelect
+          id="new-student-controlNumber"
+          value={form.controlNumberId}
+          onChange={(v) => setForm({ ...form, controlNumberId: v })}
+          controlNumbers={availableControlNumbers}
+        />
       </div>
 
       {error && <div className="text-sm text-red-600">{error}</div>}
@@ -1316,7 +1349,13 @@ function StudentForm({ agencies, onClose, onCreated }) {
  * No password field here — password resets would be a separate,
  * more carefully-guarded feature.
  */
-function EditStudentForm({ student, agencies, onClose, onSaved }) {
+function EditStudentForm({
+  student,
+  agencies,
+  controlNumbers,
+  onClose,
+  onSaved,
+}) {
   const [form, setForm] = useState({
     fullName: student.full_name || "",
     email: student.email || "",
@@ -1325,11 +1364,20 @@ function EditStudentForm({ student, agencies, onClose, onSaved }) {
     batch: student.batch || "",
     ojtStatus: student.ojt_status || "active",
     agencyId: student.agency_id || "",
+    controlNumberId: student.control_number_id || "",
     requiredHours: student.required_hours || 486,
     ...parseOfficialHoursText(student.official_hours_text),
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  // Only offer control numbers not already claimed by another student —
+  // but keep this student's own current one in the list even though
+  // it's technically "claimed", so it doesn't disappear from the
+  // dropdown while editing.
+  const availableControlNumbers = controlNumbers.filter(
+    (cn) => !cn.student_id || cn.student_id === student.student_id,
+  );
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -1345,6 +1393,7 @@ function EditStudentForm({ student, agencies, onClose, onSaved }) {
         batch: form.batch || null,
         ojtStatus: form.ojtStatus,
         agencyId: form.agencyId || null,
+        controlNumberId: form.controlNumberId || null,
         requiredHours: parseFloat(form.requiredHours),
         officialHoursText: buildOfficialHoursText(form) || null,
       });
@@ -1427,6 +1476,13 @@ function EditStudentForm({ student, agencies, onClose, onSaved }) {
           value={form.agencyId}
           onChange={(v) => setForm({ ...form, agencyId: v })}
           agencies={agencies}
+        />
+
+        <ControlNumberSelect
+          id="edit-student-controlNumber"
+          value={form.controlNumberId}
+          onChange={(v) => setForm({ ...form, controlNumberId: v })}
+          controlNumbers={availableControlNumbers}
         />
 
         <div className="sm:col-span-2">

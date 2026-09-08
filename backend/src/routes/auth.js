@@ -42,6 +42,7 @@ router.post("/signup", async (req, res) => {
     agencyId,
     requiredHours,
     officialHoursText,
+    controlNumberId,
   } = req.body;
 
   if (!email || !password || !fullName) {
@@ -61,6 +62,11 @@ router.post("/signup", async (req, res) => {
   }
   if (!agencyId) {
     return res.status(400).json({ error: "Please select your OJT agency." });
+  }
+  if (!controlNumberId) {
+    return res
+      .status(400)
+      .json({ error: "Please select your OJT control number." });
   }
   if (
     requiredHours !== undefined &&
@@ -84,6 +90,7 @@ router.post("/signup", async (req, res) => {
       agencyId,
       requiredHours: requiredHours ? Number(requiredHours) : undefined,
       officialHoursText,
+      controlNumberId,
       role: "student",
       approvalStatus: "pending",
       ojtStatus: "pending",

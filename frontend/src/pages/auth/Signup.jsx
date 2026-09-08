@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LoaderCircle, UserPlus, CheckCircle2, Check, X } from "lucide-react";
-import { signupRequest, listPublicAgencies } from "../../services/authApi";
+import {
+  signupRequest,
+  listPublicAgencies,
+  listPublicControlNumbers,
+} from "../../services/authApi";
 import { formatBatchLabel, getCurrentBatchValue } from "../../utils/batch";
 import { buildOfficialHoursText } from "../../utils/officialHours";
 import PasswordInput from "../../components/common/PasswordInput";
 import AgencySelect from "../../components/common/AgencySelect";
+import ControlNumberSelect from "../../components/common/ControlNumberSelect";
 import OfficialHoursFields from "../../components/common/OfficialHoursFields";
 import caapLogo from "../../assets/caap_logo.png";
 
@@ -23,6 +28,7 @@ export default function Signup() {
     university: "",
     batch: getCurrentBatchValue(),
     agencyId: "",
+    controlNumberId: "",
     requiredHours: "",
     morningIn: "08:00",
     morningOut: "12:00",
@@ -30,6 +36,7 @@ export default function Signup() {
     afternoonOut: "17:00",
   });
   const [agencies, setAgencies] = useState([]);
+  const [controlNumbers, setControlNumbers] = useState([]);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -38,6 +45,9 @@ export default function Signup() {
     listPublicAgencies()
       .then(setAgencies)
       .catch(() => setAgencies([]));
+    listPublicControlNumbers()
+      .then(setControlNumbers)
+      .catch(() => setControlNumbers([]));
   }, []);
 
   const officialHoursPreview = buildOfficialHoursText(form);
@@ -78,6 +88,10 @@ export default function Signup() {
       setError("Please select your OJT agency.");
       return;
     }
+    if (!form.controlNumberId) {
+      setError("Please select your OJT control number.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -89,6 +103,7 @@ export default function Signup() {
         university: form.university || null,
         batch: form.batch,
         agencyId: form.agencyId,
+        controlNumberId: form.controlNumberId,
         requiredHours: form.requiredHours || null,
         officialHoursText: officialHoursPreview || null,
       });
@@ -241,6 +256,17 @@ export default function Signup() {
               required
               disabled={submitting}
               helperText="The host agency where you'll render your OJT hours."
+            />
+
+            <ControlNumberSelect
+              id="signup-controlNumber"
+              variant="spacious"
+              value={form.controlNumberId}
+              onChange={(v) => setForm({ ...form, controlNumberId: v })}
+              controlNumbers={controlNumbers}
+              required
+              disabled={submitting}
+              helperText="Given by the admin, used to gain entry at CAAP."
             />
 
             <div>

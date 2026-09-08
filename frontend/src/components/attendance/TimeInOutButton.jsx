@@ -272,8 +272,17 @@ export default function TimeInOutButton({
   const resultRef = useRef(null);
 
   const suggestion = resolveSuggestion(todayDay);
+  // The true, unsuppressed picture of what was missed today. This must
+  // never be softened — it's the only thing standing between an
+  // incomplete day and a false "Nice work!" in SuggestedAction below.
+  const actualMissedPeriods = getMissedPeriods(todayDay);
+  // The display copy, softened for a student who's never punched at
+  // all (isUnassigned/hasNeverPunched): don't scold someone who was
+  // just assigned and hasn't had their first shift yet. This only
+  // controls what's shown (MissedPunchNotice, the AM/PM strip), never
+  // the actual completion state used to decide the "Nice work!" copy.
   const suppressMissed = isUnassigned || hasNeverPunched;
-  const missedPeriods = suppressMissed ? [] : getMissedPeriods(todayDay);
+  const missedPeriods = suppressMissed ? [] : actualMissedPeriods;
   const isLocked = submitting !== null || Boolean(disabledReason);
 
   // Scroll the result banner into view as soon as it appears. On a
@@ -362,7 +371,7 @@ export default function TimeInOutButton({
       <SuggestedAction
         suggestion={suggestion}
         todayDay={todayDay}
-        missedPeriods={missedPeriods}
+        hasMissedToday={actualMissedPeriods.length > 0}
         isLocked={isLocked}
         submitting={submitting}
         onPunch={(type) => setPendingPunch(type)}
@@ -397,20 +406,24 @@ export default function TimeInOutButton({
  * The single primary action: one button for the one thing the
  * student most likely needs right now. Falls back to a completion
  * message once both AM and PM are fully punched for the day — unless
- * something was missed, in which case MissedPunchNotice above already
- * covers it and this stays quiet rather than issuing a contradictory
- * "nice work!" next to a warning.
+ * something was missed, in which case either MissedPunchNotice above
+ * already covers it, or it's being suppressed there for a first-timer
+ * who hasn't started yet. Either way, this stays quiet rather than
+ * claiming a genuinely incomplete day is done. `hasMissedToday` is
+ * deliberately the unsuppressed signal, never the softened one used
+ * for the banner above, so this can't be tricked into a false
+ * "nice work!" by that suppression.
  */
 function SuggestedAction({
   suggestion,
   todayDay,
-  missedPeriods,
+  hasMissedToday,
   isLocked,
   submitting,
   onPunch,
 }) {
   if (!suggestion.action) {
-    if (missedPeriods.length > 0) return null;
+    if (hasMissedToday) return null;
 
     return (
       <div className="flex items-center gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3.5 mb-1 text-sm font-medium">

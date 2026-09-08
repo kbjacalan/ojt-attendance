@@ -83,6 +83,7 @@ router.post("/", async (req, res) => {
     university,
     batch,
     ojtStatus,
+    controlNumberId,
   } = req.body;
 
   if (!email || !password || !fullName || !role) {
@@ -117,6 +118,7 @@ router.post("/", async (req, res) => {
       university,
       batch,
       ojtStatus,
+      controlNumberId,
     });
     res.status(201).json(result);
   } catch (err) {

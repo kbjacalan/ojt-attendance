@@ -14,7 +14,7 @@ class DTRError extends Error {
  *
  * Returns:
  * {
- *   student: { name, course, agency, officialHours, requiredHours, month, inChargeName },
+ *   student: { name, course, agency, officialHours, requiredHours, month, inChargeName, controlNumber },
  *   days: [ { day, status, amIn, amOut, pmIn, pmOut, otIn, otOut, totalHours, certifiedBy } ],
  *   grandTotal: number,
  *   certification: { status, certifiedAt, certifiedByName, signature, totalHours }
@@ -27,11 +27,13 @@ async function getMonthlyDTR(studentId, monthStr) {
 
   const studentResult = await pool.query(
     `SELECT u.full_name, sp.course, sp.official_hours_text, sp.required_hours,
-            a.name AS agency_name, ic.full_name AS in_charge_name
+            a.name AS agency_name, ic.full_name AS in_charge_name,
+            cn.control_number
      FROM student_profiles sp
      JOIN users u ON u.id = sp.user_id
      LEFT JOIN agencies a ON a.id = sp.agency_id
      LEFT JOIN users ic ON ic.id = a.in_charge_id
+     LEFT JOIN ojt_control_numbers cn ON cn.id = sp.control_number_id
      WHERE sp.id = $1`,
     [studentId],
   );
@@ -132,6 +134,7 @@ async function getMonthlyDTR(studentId, monthStr) {
       name: student.full_name,
       course: student.course,
       agency: student.agency_name || "Unassigned",
+      controlNumber: student.control_number || "",
       officialHours: student.official_hours_text || "",
       requiredHours: parseFloat(student.required_hours) || 0,
       month: formatMonthLabel(monthStr),
