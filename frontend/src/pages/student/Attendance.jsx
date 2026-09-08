@@ -127,6 +127,12 @@ export default function Attendance() {
     (d) => d.amIn || d.amOut || d.pmIn || d.pmOut || d.otIn || d.otOut,
   );
 
+  const requiredHours = dtr?.student?.requiredHours || 0;
+  const grandTotal = dtr?.grandTotal || 0;
+  const hoursMet = requiredHours > 0 && grandTotal >= requiredHours;
+  const progressPercent =
+    requiredHours > 0 ? Math.min(100, (grandTotal / requiredHours) * 100) : 0;
+
   // Reuses the same live position already being watched for the map, so
   // the button can warn/disable itself the moment we know the student is
   // out of range, instead of only finding out after a submit round trip.
@@ -246,17 +252,45 @@ export default function Attendance() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-100 flex items-baseline justify-between">
-                <span className="text-sm text-slate-500">
-                  Hours logged this month
-                </span>
-                <span className="text-lg font-semibold text-caap-navy">
-                  {dtr.grandTotal}
-                  <span className="text-sm font-normal text-slate-400">
-                    {" "}
-                    hrs
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                  <span className="text-sm text-slate-500">Hours logged</span>
+                  <span
+                    className={`text-base sm:text-lg font-semibold ${
+                      hoursMet ? "text-emerald-600" : "text-caap-navy"
+                    }`}
+                  >
+                    {grandTotal}
+                    {requiredHours > 0 && (
+                      <span className="text-sm font-normal text-slate-400">
+                        {" "}
+                        / {requiredHours}
+                      </span>
+                    )}
+                    <span className="text-sm font-normal text-slate-400">
+                      {" "}
+                      hrs
+                    </span>
                   </span>
-                </span>
+                </div>
+
+                {requiredHours > 0 && (
+                  <div className="mt-2.5">
+                    <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          hoursMet ? "bg-emerald-500" : "bg-caap-navy"
+                        }`}
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-400 text-right">
+                      {hoursMet
+                        ? "Required hours met"
+                        : `${Math.round(progressPercent)}% of required hours`}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
