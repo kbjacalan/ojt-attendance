@@ -13,6 +13,7 @@ import {
 import { useGeolocation } from "../../hooks/useGeolocation";
 import { timeIn, timeOut } from "../../services/api";
 import GeolocationStatus from "./GeolocationStatus";
+import ConfirmModal from "../common/ConfirmModal";
 import {
   isPeriodWindowClosed,
   getMissedPeriods,
@@ -267,6 +268,7 @@ export default function TimeInOutButton({
   const { status, error, getPosition } = useGeolocation();
   const [submitting, setSubmitting] = useState(null); // 'in' | 'out' | null
   const [result, setResult] = useState(null); // { type: 'success' | 'error', message: string }
+  const [pendingPunch, setPendingPunch] = useState(null); // 'in' | 'out' | null
   const resultRef = useRef(null);
 
   const suggestion = resolveSuggestion(todayDay);
@@ -310,8 +312,32 @@ export default function TimeInOutButton({
     }
   }
 
+  const opt = PERIOD_OPTIONS.find((o) => o.value === suggestion.period);
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      {pendingPunch && (
+        <ConfirmModal
+          title={
+            pendingPunch === "in"
+              ? `Time in for ${opt.name}?`
+              : `Time out for ${opt.name}?`
+          }
+          message={
+            pendingPunch === "in"
+              ? "This will record your time in using your current location. Make sure you're within your agency premises."
+              : "This will record your time out using your current location. Make sure you're within your agency premises."
+          }
+          confirmLabel={pendingPunch === "in" ? "Time In" : "Time Out"}
+          danger={false}
+          onConfirm={() => {
+            setPendingPunch(null);
+            handlePunch(pendingPunch, suggestion.period);
+          }}
+          onCancel={() => setPendingPunch(null)}
+        />
+      )}
+
       <h2 className="text-lg font-semibold text-slate-800 mb-1">Attendance</h2>
       <p className="text-sm text-slate-500 mb-4">
         You must be within your agency premises to time in or out.
@@ -339,7 +365,7 @@ export default function TimeInOutButton({
         missedPeriods={missedPeriods}
         isLocked={isLocked}
         submitting={submitting}
-        onPunch={(type) => handlePunch(type, suggestion.period)}
+        onPunch={(type) => setPendingPunch(type)}
       />
 
       <GeolocationStatus
