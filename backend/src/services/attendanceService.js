@@ -3,19 +3,15 @@ const { isWithinGeofence } = require("../utils/geo");
 const {
   getManilaDateString,
   hoursBetween,
+  isPeriodWindowOpen,
   isPeriodWindowClosed,
 } = require("../utils/time");
 const { syncOjtStatus } = require("./userService");
 
 const PERIOD_LABEL = { morning: "morning (AM)", afternoon: "afternoon (PM)" };
 
-// Periods a student can explicitly punch against via the self-service
-// Time In / Time Out flow. 'overtime' still exists as a column/concept
-// for admin corrections, but isn't offered in the student's AM/PM
-// dropdown — OT is logged manually by staff.
 const SELECTABLE_PERIODS = ["morning", "afternoon"];
 
-// Maps a period name to its corresponding DB columns
 const PERIOD_COLUMNS = {
   morning: {
     in: "am_time_in",
@@ -43,12 +39,18 @@ const PERIOD_COLUMNS = {
   },
 };
 
-/**
- * Fetches the student's assigned agency (for geofence coordinates).
- */
+class AttendanceError extends Error {
+  constructor(message, statusCode = 400, code = null) {
+    super(message);
+    this.statusCode = statusCode;
+    this.code = code;
+  }
+}
+
 async function getStudentAgency(studentId) {
   const { rows } = await pool.query(
-    `SELECT sp.id AS student_id, a.id AS agency_id, a.name, a.latitude, a.longitude, a.radius_meters
+    `SELECT sp.id AS student_id, sp.am_start, sp.am_end, sp.pm_start, sp.pm_end,
+            a.id AS agency_id, a.name, a.latitude, a.longitude, a.radius_meters
      FROM student_profiles sp
      JOIN agencies a ON a.id = sp.agency_id
      WHERE sp.id = $1`,
@@ -60,9 +62,28 @@ async function getStudentAgency(studentId) {
   return rows[0];
 }
 
-/**
- * Fetches (or lazily creates) today's attendance_logs row for a student.
- */
+function scheduleFrom(agency) {
+  return {
+    amStart: agency.am_start,
+    amEnd: agency.am_end,
+    pmStart: agency.pm_start,
+    pmEnd: agency.pm_end,
+  };
+}
+
+function requireCompleteSchedule(agency) {
+  const schedule = scheduleFrom(agency);
+  const missing = Object.values(schedule).some((value) => !value);
+  if (missing) {
+    throw new AttendanceError(
+      "Your official hours haven't been set up yet. Please contact your OJT admin before timing in or out.",
+      409,
+      "SCHEDULE_INCOMPLETE",
+    );
+  }
+  return schedule;
+}
+
 async function getOrCreateTodayLog(studentId, agencyId) {
   const today = getManilaDateString();
 
@@ -81,12 +102,6 @@ async function getOrCreateTodayLog(studentId, agencyId) {
   return inserted.rows[0];
 }
 
-/**
- * Returns the public geofence info (name + coordinates + radius) for a
- * student's assigned agency — used by the student Attendance page to
- * render the live location map. Throws the same "not assigned" error
- * as timeIn/timeOut if the student has no agency yet.
- */
 async function getMyAgencyGeofence(studentId) {
   const agency = await getStudentAgency(studentId);
   return {
@@ -97,22 +112,6 @@ async function getMyAgencyGeofence(studentId) {
   };
 }
 
-class AttendanceError extends Error {
-  constructor(message, statusCode = 400, code = null) {
-    super(message);
-    this.statusCode = statusCode;
-    this.code = code;
-  }
-}
-
-/**
- * Handles a TIME IN request.
- * Validates geofence and the requested period (morning/afternoon, chosen
- * by the student via the AM/PM dropdown), and fills the matching
- * *_time_in column if not already set. The timestamp written is always
- * the actual current time — only which column it lands in is chosen
- * by the student.
- */
 async function timeIn({ studentId, latitude, longitude, period }) {
   if (!SELECTABLE_PERIODS.includes(period)) {
     throw new AttendanceError(
@@ -122,6 +121,7 @@ async function timeIn({ studentId, latitude, longitude, period }) {
   }
 
   const agency = await getStudentAgency(studentId);
+  const schedule = requireCompleteSchedule(agency);
 
   const { withinRadius, distanceMeters } = isWithinGeofence(
     latitude,
@@ -148,13 +148,15 @@ async function timeIn({ studentId, latitude, longitude, period }) {
     );
   }
 
-  // Once a period's window has closed with no time-in recorded, we
-  // can no longer trust "time in now" to reflect when the student
-  // actually started — it would just backfill the current moment into
-  // an earlier slot. Rather than let that stand as an inaccurate
-  // record, stop it here and point the student to a human who can
-  // verify and correct it.
-  if (isPeriodWindowClosed(period)) {
+  if (!isPeriodWindowOpen(period, schedule)) {
+    throw new AttendanceError(
+      `It's not yet time to time in for the ${PERIOD_LABEL[period]} period.`,
+      409,
+      "PERIOD_NOT_OPEN",
+    );
+  }
+
+  if (isPeriodWindowClosed(period, schedule)) {
     throw new AttendanceError(
       `You missed the time-in window for the ${PERIOD_LABEL[period]} period. Please see your agency in-charge or the OJT admin to have today's attendance corrected.`,
       409,
@@ -187,12 +189,6 @@ async function timeIn({ studentId, latitude, longitude, period }) {
   return { period, distanceMeters, log: rows[0] };
 }
 
-/**
- * Handles a TIME OUT request.
- * Requires a matching time-in for the same student-selected period to
- * already exist. Recomputes total_hours for the day after writing the
- * time-out.
- */
 async function timeOut({ studentId, latitude, longitude, period }) {
   if (!SELECTABLE_PERIODS.includes(period)) {
     throw new AttendanceError(
@@ -202,6 +198,7 @@ async function timeOut({ studentId, latitude, longitude, period }) {
   }
 
   const agency = await getStudentAgency(studentId);
+  const schedule = requireCompleteSchedule(agency);
 
   const { withinRadius, distanceMeters } = isWithinGeofence(
     latitude,
@@ -234,11 +231,7 @@ async function timeOut({ studentId, latitude, longitude, period }) {
     );
   }
 
-  // Same reasoning as the time-in guard above: once the period's
-  // window has closed, a time-out submitted now can't reflect when
-  // the student actually left. Leave the record open and route them
-  // to a human correction instead of writing an inaccurate time.
-  if (isPeriodWindowClosed(period)) {
+  if (isPeriodWindowClosed(period, schedule)) {
     throw new AttendanceError(
       `You missed the time-out window for the ${PERIOD_LABEL[period]} period. Please see your agency in-charge or the OJT admin to have today's attendance corrected.`,
       409,
@@ -276,18 +269,11 @@ async function timeOut({ studentId, latitude, longitude, period }) {
     [totalHours, updatedLog.id],
   );
 
-  // A time-out just added hours toward the student's requirement —
-  // check whether they've now hit (or, on a later correction, fallen
-  // back below) their required_hours.
   await syncOjtStatus(studentId);
 
   return { period, distanceMeters, log: final.rows[0] };
 }
 
-/**
- * Sums completed in/out pairs across morning, afternoon, and overtime.
- * Incomplete pairs (e.g. timed in but not yet out) contribute 0 until closed.
- */
 function computeTotalHours(log) {
   let total = 0;
   if (log.am_time_in && log.am_time_out)
@@ -299,12 +285,6 @@ function computeTotalHours(log) {
   return Math.round(total * 100) / 100;
 }
 
-/**
- * Converts a "HH:MM" string on a given date into a proper UTC-backed
- * Date object anchored to Asia/Manila time — so a correction entered
- * as "8:00" for July 7 is stored as 8:00 AM Manila time, regardless of
- * what timezone the server itself runs in.
- */
 function manilaTimeToDate(dateStr, timeStr) {
   if (!timeStr) return null;
   const [h, m] = timeStr.split(":");
@@ -313,19 +293,6 @@ function manilaTimeToDate(dateStr, timeStr) {
   );
 }
 
-/**
- * Allows an in-charge or admin to manually correct a student's
- * attendance for a specific day — e.g. a missed time-out, a GPS
- * rejection that should have succeeded, or a forgotten log entirely.
- *
- * Refuses to edit a day that falls inside an already-certified DTR
- * period, since that would silently change a signed-off official
- * record. The caller must uncertify that month first.
- *
- * `times` may include any of: amIn, amOut, pmIn, pmOut, otIn, otOut
- * (as "HH:MM" strings, or null/omitted to clear a field).
- * `remarks` is a free-text explanation, required for accountability.
- */
 async function correctAttendanceLog({
   studentId,
   dateStr,
@@ -340,7 +307,7 @@ async function correctAttendanceLog({
     );
   }
 
-  const monthStr = dateStr.slice(0, 7); // 'YYYY-MM'
+  const monthStr = dateStr.slice(0, 7);
   const periodCheck = await pool.query(
     `SELECT status FROM dtr_periods WHERE student_id = $1 AND period_month = $2`,
     [studentId, `${monthStr}-01`],
@@ -398,9 +365,7 @@ async function correctAttendanceLog({
     ot_time_in:
       "otIn" in times ? manilaTimeToDate(dateStr, times.otIn) : log.ot_time_in,
     ot_time_out:
-      "otOut" in times
-        ? manilaTimeToDate(dateStr, times.otOut)
-        : log.ot_time_out,
+      "otOut" in times ? manilaTimeToDate(dateStr, times.otOut) : log.ot_time_out,
   };
 
   const totalHours = computeTotalHours(updatedTimes);
@@ -428,8 +393,6 @@ async function correctAttendanceLog({
     ],
   );
 
-  // A correction can move total hours up or down, so re-check
-  // completion both ways (see syncOjtStatus for why it never auto-drops).
   await syncOjtStatus(studentId);
 
   return rows[0];

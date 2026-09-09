@@ -37,10 +37,7 @@ import AgencySelect from "../../components/common/AgencySelect";
 import ControlNumberSelect from "../../components/common/ControlNumberSelect";
 import OfficialHoursFields from "../../components/common/OfficialHoursFields";
 import { formatBatchLabel } from "../../utils/batch";
-import {
-  parseOfficialHoursText,
-  buildOfficialHoursText,
-} from "../../utils/officialHours";
+import { validateOfficialHours } from "../../utils/officialHours";
 
 const OJT_STATUS_LABELS = {
   pending: "Pending",
@@ -1199,9 +1196,14 @@ function StudentForm({ agencies, controlNumbers, onClose, onCreated }) {
     agencyId: "",
     controlNumberId: "",
     requiredHours: 486,
+    amStart: "08:00",
+    amEnd: "12:00",
+    pmStart: "13:00",
+    pmEnd: "17:00",
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   // Only offer control numbers not already claimed by another student.
   const availableControlNumbers = controlNumbers.filter((cn) => !cn.student_id);
@@ -1210,6 +1212,14 @@ function StudentForm({ agencies, controlNumbers, onClose, onCreated }) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setAttemptedSubmit(true);
+
+    const officialHoursError = validateOfficialHours(form);
+    if (officialHoursError) {
+      setError(officialHoursError);
+      setSubmitting(false);
+      return;
+    }
 
     try {
       await createUser({
@@ -1224,6 +1234,10 @@ function StudentForm({ agencies, controlNumbers, onClose, onCreated }) {
         agencyId: form.agencyId || null,
         controlNumberId: form.controlNumberId || null,
         requiredHours: parseFloat(form.requiredHours),
+        amStart: form.amStart,
+        amEnd: form.amEnd,
+        pmStart: form.pmStart,
+        pmEnd: form.pmEnd,
       });
       onCreated();
     } catch (err) {
@@ -1322,6 +1336,13 @@ function StudentForm({ agencies, controlNumbers, onClose, onCreated }) {
         />
       </div>
 
+      <OfficialHoursFields
+        value={form}
+        onChange={(v) => setForm({ ...form, ...v })}
+        disabled={submitting}
+        showValidation={attemptedSubmit}
+      />
+
       {error && <div className="text-sm text-red-600">{error}</div>}
 
       <div className="flex gap-2">
@@ -1366,10 +1387,14 @@ function EditStudentForm({
     agencyId: student.agency_id || "",
     controlNumberId: student.control_number_id || "",
     requiredHours: student.required_hours || 486,
-    ...parseOfficialHoursText(student.official_hours_text),
+    amStart: (student.am_start || "").slice(0, 5),
+    amEnd: (student.am_end || "").slice(0, 5),
+    pmStart: (student.pm_start || "").slice(0, 5),
+    pmEnd: (student.pm_end || "").slice(0, 5),
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   // Only offer control numbers not already claimed by another student —
   // but keep this student's own current one in the list even though
@@ -1383,6 +1408,14 @@ function EditStudentForm({
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setAttemptedSubmit(true);
+
+    const officialHoursError = validateOfficialHours(form);
+    if (officialHoursError) {
+      setError(officialHoursError);
+      setSubmitting(false);
+      return;
+    }
 
     try {
       await updateStudentProfile(student.student_id, {
@@ -1395,7 +1428,10 @@ function EditStudentForm({
         agencyId: form.agencyId || null,
         controlNumberId: form.controlNumberId || null,
         requiredHours: parseFloat(form.requiredHours),
-        officialHoursText: buildOfficialHoursText(form) || null,
+        amStart: form.amStart,
+        amEnd: form.amEnd,
+        pmStart: form.pmStart,
+        pmEnd: form.pmEnd,
       });
       onSaved();
     } catch (err) {
@@ -1490,6 +1526,7 @@ function EditStudentForm({
             value={form}
             onChange={(v) => setForm({ ...form, ...v })}
             disabled={submitting}
+            showValidation={attemptedSubmit}
           />
         </div>
       </div>

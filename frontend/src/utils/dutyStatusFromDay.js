@@ -1,10 +1,3 @@
-/**
- * Mirrors backend/src/utils/duty.js's computeDutyStatus(), but reads
- * from a DTR "day" object as returned by GET /api/dtr (amIn/amOut/
- * pmIn/pmOut/otIn/otOut as "HH:MM" strings or "") instead of raw
- * attendance_logs timestamps. Lets the student Attendance page show
- * today's live status without needing a separate endpoint.
- */
 export function computeDutyStatusFromDay(day) {
   if (!day) {
     return { status: "no_record", lastPunchLabel: null, lastPunchTime: null };
@@ -32,9 +25,6 @@ export function computeDutyStatusFromDay(day) {
     if (day[inKey] && day[outKey]) hasAnyCompleted = true;
   }
 
-  // Values are "HH:MM" with no date attached, but punches are recorded
-  // in chronological order through the day, so the last non-empty one
-  // in period order is the most recent punch.
   let lastPunchLabel = null;
   let lastPunchTime = null;
   for (const [key, label] of periods) {
@@ -52,7 +42,6 @@ export function computeDutyStatusFromDay(day) {
   return { status, lastPunchLabel, lastPunchTime };
 }
 
-/** Day-of-month in Asia/Manila, regardless of the device's local timezone. */
 export function getManilaDayNumber(date = new Date()) {
   return parseInt(
     new Intl.DateTimeFormat("en-US", {
@@ -63,7 +52,6 @@ export function getManilaDayNumber(date = new Date()) {
   );
 }
 
-/** Hour and minute (0-23 / 0-59) in Asia/Manila. */
 function getManilaHourMinute(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Manila",
@@ -76,58 +64,50 @@ function getManilaHourMinute(date = new Date()) {
   return { hour, minute };
 }
 
-// Mirrors backend/src/utils/time.js's PERIOD_WINDOW_CLOSE_HOUR. Kept in
-// sync manually since the frontend and backend don't share code — if
-// CAAP's official hours change, update both.
-const PERIOD_WINDOW_CLOSE_HOUR = { morning: 12, afternoon: 17 };
-
-// Mirrors backend/src/utils/time.js's GRACE_MINUTES: a punch at
-// exactly 12:00:xx or 5:00:xx still counts as on time. The window is
-// only truly closed once the clock reads :01 past the cutoff hour.
-const GRACE_MINUTES = 1;
-
-/**
- * True once a period's punch window has closed for the day. Used to
- * tell the difference between "not yet timed in, still time to" and
- * "missed it" so the UI can stop offering a self-service punch for
- * the latter before the student even taps anything. Minute-precision
- * with a 1-minute grace period — see GRACE_MINUTES above.
- */
-export function isPeriodWindowClosed(period, date = new Date()) {
-  const closeHour = PERIOD_WINDOW_CLOSE_HOUR[period];
-  if (closeHour == null) return false;
-  const { hour, minute } = getManilaHourMinute(date);
-  const nowMinutes = hour * 60 + minute;
-  const closeMinutes = closeHour * 60 + GRACE_MINUTES;
-  return nowMinutes >= closeMinutes;
+function timeStringToMinutes(value) {
+  if (!value) return null;
+  const [h, m] = value.split(":").map(Number);
+  return h * 60 + m;
 }
 
-/**
- * Minutes remaining before a still-open period's window closes, or
- * `null` if the period has no window, has already closed, or hasn't
- * started. Powers a "closing soon" nudge so a student can be warned
- * *before* a punch is missed, rather than only finding out after.
- * Targets the true closing instant (cutoff hour + grace minute), so
- * the countdown lines up with isPeriodWindowClosed above.
- */
-export function getMinutesUntilPeriodClose(period, date = new Date()) {
-  const closeHour = PERIOD_WINDOW_CLOSE_HOUR[period];
-  if (closeHour == null) return null;
+export const GRACE_MINUTES = 10;
+
+const PERIOD_BOUNDS = {
+  morning: { startKey: "amStart", endKey: "amEnd" },
+  afternoon: { startKey: "pmStart", endKey: "pmEnd" },
+};
+
+export function isPeriodWindowOpen(period, schedule, date = new Date()) {
+  const bounds = PERIOD_BOUNDS[period];
+  if (!bounds) return false;
+  const startMinutes = timeStringToMinutes(schedule?.[bounds.startKey]);
+  if (startMinutes == null) return false;
   const { hour, minute } = getManilaHourMinute(date);
-  const remaining = closeHour * 60 + GRACE_MINUTES - (hour * 60 + minute);
+  const nowMinutes = hour * 60 + minute;
+  return nowMinutes >= startMinutes - GRACE_MINUTES;
+}
+
+export function isPeriodWindowClosed(period, schedule, date = new Date()) {
+  const bounds = PERIOD_BOUNDS[period];
+  if (!bounds) return false;
+  const endMinutes = timeStringToMinutes(schedule?.[bounds.endKey]);
+  if (endMinutes == null) return false;
+  const { hour, minute } = getManilaHourMinute(date);
+  const nowMinutes = hour * 60 + minute;
+  return nowMinutes >= endMinutes + GRACE_MINUTES;
+}
+
+export function getMinutesUntilPeriodClose(period, schedule, date = new Date()) {
+  const bounds = PERIOD_BOUNDS[period];
+  if (!bounds) return null;
+  const endMinutes = timeStringToMinutes(schedule?.[bounds.endKey]);
+  if (endMinutes == null) return null;
+  const { hour, minute } = getManilaHourMinute(date);
+  const remaining = endMinutes + GRACE_MINUTES - (hour * 60 + minute);
   return remaining > 0 ? remaining : null;
 }
 
-/**
- * Lists any periods today that were missed outright: the window
- * closed with no time-in at all, or with a time-in but no time-out.
- * These can no longer be self-served — punching now would just record
- * the current moment in the wrong slot — so the UI should surface
- * them as "see your in-charge/admin" rather than as tappable actions.
- *
- * Returns an array of `{ period: 'morning' | 'afternoon', type: 'in' | 'out' }`.
- */
-export function getMissedPeriods(todayDay, date = new Date()) {
+export function getMissedPeriods(todayDay, schedule, date = new Date()) {
   const missed = [];
   const periods = [
     { value: "morning", inKey: "amIn", outKey: "amOut" },
@@ -135,7 +115,7 @@ export function getMissedPeriods(todayDay, date = new Date()) {
   ];
 
   for (const { value, inKey, outKey } of periods) {
-    if (!isPeriodWindowClosed(value, date)) continue;
+    if (!isPeriodWindowClosed(value, schedule, date)) continue;
     const inTime = todayDay?.[inKey];
     const outTime = todayDay?.[outKey];
     if (!inTime) missed.push({ period: value, type: "in" });
@@ -143,4 +123,10 @@ export function getMissedPeriods(todayDay, date = new Date()) {
   }
 
   return missed;
+}
+
+export function hasCompleteSchedule(schedule) {
+  return Boolean(
+    schedule?.amStart && schedule?.amEnd && schedule?.pmStart && schedule?.pmEnd,
+  );
 }

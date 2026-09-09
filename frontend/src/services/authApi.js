@@ -26,7 +26,10 @@ export async function signupRequest({
   batch,
   agencyId,
   requiredHours,
-  officialHoursText,
+  amStart,
+  amEnd,
+  pmStart,
+  pmEnd,
   controlNumberId,
 }) {
   const res = await fetch(`${API_BASE_URL}/auth/signup`, {
@@ -41,7 +44,10 @@ export async function signupRequest({
       batch,
       agencyId,
       requiredHours,
-      officialHoursText,
+      amStart,
+      amEnd,
+      pmStart,
+      pmEnd,
       controlNumberId,
     }),
   });

@@ -3,6 +3,7 @@ const router = express.Router();
 const { login, changePassword, AuthError } = require("../services/authService");
 const { createUser, UserError } = require("../services/userService");
 const { authenticate } = require("../middleware/authenticate");
+const { validateOfficialHours } = require("../utils/officialHours");
 
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -23,14 +24,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-/**
- * POST /api/auth/signup — public, unauthenticated student self-registration.
- * Creates the account with approval_status = 'pending'; they cannot log
- * in until an admin approves them. `role` is deliberately hardcoded to
- * 'student' here regardless of anything in the request body — this is
- * the only account-creation path that isn't behind admin auth, so it
- * must never be able to create an in_charge or admin account.
- */
 router.post("/signup", async (req, res) => {
   const {
     email,
@@ -41,7 +34,10 @@ router.post("/signup", async (req, res) => {
     batch,
     agencyId,
     requiredHours,
-    officialHoursText,
+    amStart,
+    amEnd,
+    pmStart,
+    pmEnd,
     controlNumberId,
   } = req.body;
 
@@ -79,6 +75,16 @@ router.post("/signup", async (req, res) => {
       .json({ error: "requiredHours must be a positive number." });
   }
 
+  const officialHoursError = validateOfficialHours({
+    amStart,
+    amEnd,
+    pmStart,
+    pmEnd,
+  });
+  if (officialHoursError) {
+    return res.status(400).json({ error: officialHoursError });
+  }
+
   try {
     const result = await createUser({
       email,
@@ -89,7 +95,10 @@ router.post("/signup", async (req, res) => {
       batch,
       agencyId,
       requiredHours: requiredHours ? Number(requiredHours) : undefined,
-      officialHoursText,
+      amStart,
+      amEnd,
+      pmStart,
+      pmEnd,
       controlNumberId,
       role: "student",
       approvalStatus: "pending",
@@ -109,13 +118,6 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-/**
- * POST /api/auth/change-password — self-service password change for the
- * logged-in user, regardless of role. Requires the current password for
- * verification (checked in authService.changePassword) before a new one
- * can be set, so a hijacked/left-open session alone isn't enough to
- * lock the real owner out of their own account.
- */
 router.post("/change-password", authenticate, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 

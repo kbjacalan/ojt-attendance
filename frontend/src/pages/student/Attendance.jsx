@@ -308,16 +308,24 @@ export default function Attendance() {
             </div>
           )}
 
-          <TimeInOutButton
-            studentId={user.studentId}
-            todayDay={todayDay}
-            onPunchSuccess={loadDTR}
-            disabledReason={disabledReason}
-            liveGeofence={geofence}
-            isUnassigned={isUnassigned}
-            hasNeverPunched={hasNeverPunched}
-            agencyName={agency?.name}
-          />
+          {!loading && (
+            <TimeInOutButton
+              studentId={user.studentId}
+              todayDay={todayDay}
+              schedule={{
+                amStart: dtr?.student?.amStart,
+                amEnd: dtr?.student?.amEnd,
+                pmStart: dtr?.student?.pmStart,
+                pmEnd: dtr?.student?.pmEnd,
+              }}
+              onPunchSuccess={loadDTR}
+              disabledReason={disabledReason}
+              liveGeofence={geofence}
+              isUnassigned={isUnassigned}
+              hasNeverPunched={hasNeverPunched}
+              agencyName={agency?.name}
+            />
+          )}
 
           <Link
             to="/dtr"

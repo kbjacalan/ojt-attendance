@@ -16,8 +16,11 @@ import GeolocationStatus from "./GeolocationStatus";
 import ConfirmModal from "../common/ConfirmModal";
 import {
   isPeriodWindowClosed,
+  isPeriodWindowOpen,
   getMissedPeriods,
   getMinutesUntilPeriodClose,
+  hasCompleteSchedule,
+  GRACE_MINUTES,
 } from "../../utils/dutyStatusFromDay";
 
 const PERIOD_OPTIONS = [
@@ -37,8 +40,6 @@ const PERIOD_OPTIONS = [
   },
 ];
 
-// A window is "closing soon" once this many minutes remain — the
-// point at which a proactive nudge is more useful than a surprise.
 const CLOSING_SOON_THRESHOLD_MINUTES = 45;
 
 function to12Hour(time24) {
@@ -50,7 +51,6 @@ function to12Hour(time24) {
   return `${h}:${mStr} ${period}`;
 }
 
-/** Defaults to AM before noon, PM afterward, using Manila time. */
 function suggestPeriod() {
   const hour = parseInt(
     new Intl.DateTimeFormat("en-US", {
@@ -63,40 +63,46 @@ function suggestPeriod() {
   return hour < 12 ? "morning" : "afternoon";
 }
 
-/**
- * Figures out the one action a student most likely wants right now,
- * so the primary UI can be a single obvious button instead of asking
- * them to pick AM/PM and then Time In/Out every time.
- *
- * Checks the clock-appropriate period first (e.g. PM in the
- * afternoon); if that period's already fully punched, falls back to
- * the other one. A period whose window has already closed is skipped
- * here — it's no longer punchable, only missed, and is surfaced
- * separately via getMissedPeriods()/MissedPunchNotice instead.
- * Returns `{ period, action: null }` if there's nothing actionable
- * left (either everything's complete, or what remains is missed
- * rather than pending).
- */
-function resolveSuggestion(todayDay) {
+function subtractMinutes(time24, minutes) {
+  if (!time24) return time24;
+  const [hStr, mStr] = time24.split(":");
+  const total = parseInt(hStr, 10) * 60 + parseInt(mStr, 10) - minutes;
+  const clamped = ((total % 1440) + 1440) % 1440;
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function periodOpenTime(period, schedule) {
+  const start = period === "morning" ? schedule?.amStart : schedule?.pmStart;
+  return subtractMinutes(start, GRACE_MINUTES);
+}
+
+function resolveSuggestion(todayDay, schedule) {
   const clockPeriod = suggestPeriod();
   const order =
     clockPeriod === "morning"
       ? ["morning", "afternoon"]
       : ["afternoon", "morning"];
 
+  let waitingPeriod = null;
+
   for (const value of order) {
     const opt = PERIOD_OPTIONS.find((o) => o.value === value);
     const inTime = todayDay?.[opt.inKey] || "";
     const outTime = todayDay?.[opt.outKey] || "";
-    if (isPeriodWindowClosed(value)) continue;
-    if (!inTime) return { period: value, action: "in" };
-    if (!outTime) return { period: value, action: "out" };
+    if (isPeriodWindowClosed(value, schedule)) continue;
+    if (!isPeriodWindowOpen(value, schedule)) {
+      if (!inTime && !waitingPeriod) waitingPeriod = value;
+      continue;
+    }
+    if (!inTime) return { period: value, action: "in", waitingPeriod: null };
+    if (!outTime) return { period: value, action: "out", waitingPeriod: null };
   }
 
-  return { period: clockPeriod, action: null };
+  return { period: clockPeriod, action: null, waitingPeriod };
 }
 
-/** Human copy for one missed-period entry, shown in MissedPunchNotice. */
 function missedPeriodMessage({ period, type }) {
   const name = PERIOD_OPTIONS.find((o) => o.value === period).name;
   return type === "in"
@@ -104,13 +110,6 @@ function missedPeriodMessage({ period, type }) {
     : `${name} shift: you timed in, but the time-out window closed before you punched out.`;
 }
 
-/**
- * Replaces the punch button for any period that's genuinely been
- * missed (window closed, self-service no longer possible). Rather
- * than let a student backfill an inaccurate timestamp, this tells
- * them plainly what was missed and who can fix it, so they know
- * exactly what to do next instead of hunting for a workaround.
- */
 function MissedPunchNotice({ missedPeriods }) {
   if (missedPeriods.length === 0) return null;
 
@@ -137,13 +136,6 @@ function MissedPunchNotice({ missedPeriods }) {
   );
 }
 
-/**
- * Reassures a student who's just been assigned but hasn't logged a
- * single punch yet — the gap MissedPunchNotice deliberately stays
- * quiet for (see hasNeverPunched). Purely informational, never
- * disables anything; distinct from disabledReason's amber warning,
- * which is reserved for things that actually block timing in/out.
- */
 function FirstTimeNotice({ agencyName }) {
   return (
     <div className="flex items-start gap-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 text-sm mb-3">
@@ -156,13 +148,21 @@ function FirstTimeNotice({ agencyName }) {
   );
 }
 
-/**
- * One period's state, for the at-a-glance strip above the punch
- * button. Lets a student see both AM and PM at once — the one useful
- * thing the old manual-period picker gave them — without exposing an
- * editable control that could be used to force a punch into the
- * wrong slot.
- */
+function ScheduleIncompleteNotice() {
+  return (
+    <div className="flex items-start gap-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3.5 mb-3">
+      <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+      <div className="text-sm">
+        <p className="font-medium">Your official hours haven&apos;t been set.</p>
+        <p className="mt-1 text-[13px] text-red-600/90">
+          Please contact your agency in-charge or the OJT admin so they can
+          complete your profile before you can time in or out.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function derivePeriodStatus(opt, todayDay, missedPeriods) {
   const inTime = todayDay?.[opt.inKey] || "";
   const outTime = todayDay?.[opt.outKey] || "";
@@ -200,7 +200,6 @@ function periodStatusLabel({ state, inTime, outTime }) {
   return "Not yet";
 }
 
-/** Small two-up strip showing today's AM and PM state at a glance. */
 function TodayShiftsStrip({ todayDay, missedPeriods }) {
   return (
     <div className="grid grid-cols-2 gap-2 mb-4">
@@ -228,22 +227,14 @@ function TodayShiftsStrip({ todayDay, missedPeriods }) {
   );
 }
 
-/**
- * Warns a student that the window for their upcoming action is about
- * to close, before it's too late to act — the proactive counterpart
- * to MissedPunchNotice. Only shown for an actionable suggestion
- * (never for a period that's already missed or done).
- */
-function ClosingSoonWarning({ suggestion }) {
-  if (!suggestion.action) return null;
-  const minutesLeft = getMinutesUntilPeriodClose(suggestion.period);
+function ClosingSoonWarning({ suggestion, schedule }) {
+  if (suggestion.action !== "out") return null;
+  const opt = PERIOD_OPTIONS.find((o) => o.value === suggestion.period);
+  const minutesLeft = getMinutesUntilPeriodClose(suggestion.period, schedule);
   if (minutesLeft == null || minutesLeft > CLOSING_SOON_THRESHOLD_MINUTES) {
     return null;
   }
-
-  const opt = PERIOD_OPTIONS.find((o) => o.value === suggestion.period);
-  const verb = suggestion.action === "in" ? "time in" : "time out";
-
+  const verb = "time out";
   return (
     <div className="flex items-start gap-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 text-sm mb-3">
       <Clock className="w-4 h-4 shrink-0 mt-0.5" />
@@ -258,6 +249,7 @@ function ClosingSoonWarning({ suggestion }) {
 export default function TimeInOutButton({
   studentId,
   todayDay,
+  schedule,
   onPunchSuccess,
   disabledReason,
   liveGeofence,
@@ -266,29 +258,19 @@ export default function TimeInOutButton({
   agencyName,
 }) {
   const { status, error, getPosition } = useGeolocation();
-  const [submitting, setSubmitting] = useState(null); // 'in' | 'out' | null
-  const [result, setResult] = useState(null); // { type: 'success' | 'error', message: string }
-  const [pendingPunch, setPendingPunch] = useState(null); // 'in' | 'out' | null
+  const [submitting, setSubmitting] = useState(null);
+  const [result, setResult] = useState(null);
+  const [pendingPunch, setPendingPunch] = useState(null);
   const resultRef = useRef(null);
 
-  const suggestion = resolveSuggestion(todayDay);
-  // The true, unsuppressed picture of what was missed today. This must
-  // never be softened — it's the only thing standing between an
-  // incomplete day and a false "Nice work!" in SuggestedAction below.
-  const actualMissedPeriods = getMissedPeriods(todayDay);
-  // The display copy, softened for a student who's never punched at
-  // all (isUnassigned/hasNeverPunched): don't scold someone who was
-  // just assigned and hasn't had their first shift yet. This only
-  // controls what's shown (MissedPunchNotice, the AM/PM strip), never
-  // the actual completion state used to decide the "Nice work!" copy.
-  const suppressMissed = isUnassigned || hasNeverPunched;
+  const scheduleComplete = isUnassigned || hasCompleteSchedule(schedule);
+  const suggestion = resolveSuggestion(todayDay, schedule);
+  const actualMissedPeriods = getMissedPeriods(todayDay, schedule);
+  const suppressMissed = isUnassigned || hasNeverPunched || !scheduleComplete;
   const missedPeriods = suppressMissed ? [] : actualMissedPeriods;
-  const isLocked = submitting !== null || Boolean(disabledReason);
+  const isLocked =
+    submitting !== null || Boolean(disabledReason) || !scheduleComplete;
 
-  // Scroll the result banner into view as soon as it appears. On a
-  // phone the buttons are often near the bottom of the viewport, so
-  // without this the most important feedback of the interaction can
-  // render off-screen.
   useEffect(() => {
     if (result && resultRef.current) {
       resultRef.current.scrollIntoView({
@@ -361,16 +343,18 @@ export default function TimeInOutButton({
         </div>
       )}
 
-      {!isUnassigned && hasNeverPunched && (
+      {!isUnassigned && !scheduleComplete && <ScheduleIncompleteNotice />}
+      {!isUnassigned && scheduleComplete && hasNeverPunched && (
         <FirstTimeNotice agencyName={agencyName} />
       )}
 
       <MissedPunchNotice missedPeriods={missedPeriods} />
-      <ClosingSoonWarning suggestion={suggestion} />
+      <ClosingSoonWarning suggestion={suggestion} schedule={schedule} />
 
       <SuggestedAction
         suggestion={suggestion}
         todayDay={todayDay}
+        schedule={schedule}
         hasMissedToday={actualMissedPeriods.length > 0}
         isLocked={isLocked}
         submitting={submitting}
@@ -402,21 +386,10 @@ export default function TimeInOutButton({
   );
 }
 
-/**
- * The single primary action: one button for the one thing the
- * student most likely needs right now. Falls back to a completion
- * message once both AM and PM are fully punched for the day — unless
- * something was missed, in which case either MissedPunchNotice above
- * already covers it, or it's being suppressed there for a first-timer
- * who hasn't started yet. Either way, this stays quiet rather than
- * claiming a genuinely incomplete day is done. `hasMissedToday` is
- * deliberately the unsuppressed signal, never the softened one used
- * for the banner above, so this can't be tricked into a false
- * "nice work!" by that suppression.
- */
 function SuggestedAction({
   suggestion,
   todayDay,
+  schedule,
   hasMissedToday,
   isLocked,
   submitting,
@@ -424,6 +397,17 @@ function SuggestedAction({
 }) {
   if (!suggestion.action) {
     if (hasMissedToday) return null;
+
+    if (suggestion.waitingPeriod) {
+      const opt = PERIOD_OPTIONS.find((o) => o.value === suggestion.waitingPeriod);
+      const startTime = periodOpenTime(suggestion.waitingPeriod, schedule);
+      return (
+        <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 px-4 py-3.5 mb-1 text-sm">
+          <Clock className="w-5 h-5 shrink-0" />
+          Your {opt.name} shift opens at {to12Hour(startTime)}.
+        </div>
+      );
+    }
 
     return (
       <div className="flex items-center gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3.5 mb-1 text-sm font-medium">

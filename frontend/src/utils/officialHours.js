@@ -1,4 +1,3 @@
-/** Converts "HH:MM" 24-hour string to "h:mm AM/PM". */
 export function to12Hour(time24) {
   if (!time24) return "";
   const [hStr, mStr] = time24.split(":");
@@ -10,67 +9,34 @@ export function to12Hour(time24) {
   return `${h}:${m} ${period}`;
 }
 
-/** Converts "h:mm AM/PM" back to "HH:MM" 24-hour string. */
-export function to24Hour(time12) {
-  const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec((time12 || "").trim());
-  if (!match) return "";
-  let [, hStr, mStr, period] = match;
-  let h = parseInt(hStr, 10) % 12;
-  if (period.toUpperCase() === "PM") h += 12;
-  return `${String(h).padStart(2, "0")}:${mStr}`;
-}
-
-/**
- * Builds the free-text "Official Hours" string shown on the DTR from
- * the four granular time-in/time-out picks (morning + afternoon).
- * Any block left blank is simply omitted from the summary.
- */
-export function buildOfficialHoursText({
-  morningIn,
-  morningOut,
-  afternoonIn,
-  afternoonOut,
-}) {
+export function buildOfficialHoursText({ amStart, amEnd, pmStart, pmEnd }) {
   const parts = [];
-  if (morningIn && morningOut) {
-    parts.push(`Morning: ${to12Hour(morningIn)} - ${to12Hour(morningOut)}`);
+  if (amStart && amEnd) {
+    parts.push(`Morning: ${to12Hour(amStart)} - ${to12Hour(amEnd)}`);
   }
-  if (afternoonIn && afternoonOut) {
-    parts.push(
-      `Afternoon: ${to12Hour(afternoonIn)} - ${to12Hour(afternoonOut)}`,
-    );
+  if (pmStart && pmEnd) {
+    parts.push(`Afternoon: ${to12Hour(pmStart)} - ${to12Hour(pmEnd)}`);
   }
   return parts.join("  |  ");
 }
 
-/**
- * Parses a previously-built Official Hours string back into the four
- * granular time fields, so the edit form can prefill from whatever was
- * set at signup instead of starting blank. Blocks that can't be parsed
- * (or are missing) come back as empty strings.
- */
-export function parseOfficialHoursText(text) {
-  const result = {
-    morningIn: "",
-    morningOut: "",
-    afternoonIn: "",
-    afternoonOut: "",
-  };
-  if (!text) return result;
+function toMinutes(time24) {
+  const [h, m] = time24.split(":").map(Number);
+  return h * 60 + m;
+}
 
-  const morningMatch =
-    /Morning:\s*([\d:]+\s*[AP]M)\s*-\s*([\d:]+\s*[AP]M)/i.exec(text);
-  if (morningMatch) {
-    result.morningIn = to24Hour(morningMatch[1]);
-    result.morningOut = to24Hour(morningMatch[2]);
+export function validateOfficialHours({ amStart, amEnd, pmStart, pmEnd }) {
+  if (!amStart || !amEnd || !pmStart || !pmEnd) {
+    return "All four official hours fields are required.";
   }
-
-  const afternoonMatch =
-    /Afternoon:\s*([\d:]+\s*[AP]M)\s*-\s*([\d:]+\s*[AP]M)/i.exec(text);
-  if (afternoonMatch) {
-    result.afternoonIn = to24Hour(afternoonMatch[1]);
-    result.afternoonOut = to24Hour(afternoonMatch[2]);
+  if (toMinutes(amEnd) <= toMinutes(amStart)) {
+    return "Morning Time Out must be after Morning Time In.";
   }
-
-  return result;
+  if (toMinutes(pmEnd) <= toMinutes(pmStart)) {
+    return "Afternoon Time Out must be after Afternoon Time In.";
+  }
+  if (toMinutes(pmStart) < toMinutes(amEnd)) {
+    return "Afternoon Time In cannot be before Morning Time Out.";
+  }
+  return null;
 }

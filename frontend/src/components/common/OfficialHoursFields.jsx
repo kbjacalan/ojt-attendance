@@ -1,23 +1,15 @@
-import { buildOfficialHoursText } from "../../utils/officialHours";
+import { buildOfficialHoursText, validateOfficialHours } from "../../utils/officialHours";
 
-/**
- * Shared "Official Hours" input group — four time pickers (morning +
- * afternoon in/out) plus a live text preview of what will be saved.
- * Used by both the student signup form and the admin's Edit Student
- * form so the two stay in sync.
- *
- * `value` is an object with morningIn/morningOut/afternoonIn/afternoonOut
- * (24-hour "HH:MM" strings, blank if unset). `onChange` receives the
- * updated value object on every keystroke.
- */
 export default function OfficialHoursFields({
   value,
   onChange,
   disabled,
   variant = "compact",
+  showValidation = false,
 }) {
   const preview = buildOfficialHoursText(value);
   const isSpacious = variant === "spacious";
+  const validationError = showValidation ? validateOfficialHours(value) : null;
 
   function setField(field, v) {
     onChange({ ...value, [field]: v });
@@ -32,8 +24,7 @@ export default function OfficialHoursFields({
             : "block text-xs font-medium text-slate-600 mb-1"
         }
       >
-        Official Hours{" "}
-        <span className="text-slate-400 font-normal">(optional)</span>
+        Official Hours <span className="text-red-500">*</span>
       </label>
       <p
         className={
@@ -43,32 +34,36 @@ export default function OfficialHoursFields({
         }
       >
         Regular time in/out — automatically shown in the Official Hours section
-        of the DTR.
+        of the DTR, and used to determine when this student can time in or out.
       </p>
       <div className="grid grid-cols-2 gap-3">
         <TimeField
           label="Morning Time In"
-          value={value.morningIn}
-          onChange={(v) => setField("morningIn", v)}
+          value={value.amStart}
+          onChange={(v) => setField("amStart", v)}
           disabled={disabled}
+          required
         />
         <TimeField
           label="Morning Time Out"
-          value={value.morningOut}
-          onChange={(v) => setField("morningOut", v)}
+          value={value.amEnd}
+          onChange={(v) => setField("amEnd", v)}
           disabled={disabled}
+          required
         />
         <TimeField
           label="Afternoon Time In"
-          value={value.afternoonIn}
-          onChange={(v) => setField("afternoonIn", v)}
+          value={value.pmStart}
+          onChange={(v) => setField("pmStart", v)}
           disabled={disabled}
+          required
         />
         <TimeField
           label="Afternoon Time Out"
-          value={value.afternoonOut}
-          onChange={(v) => setField("afternoonOut", v)}
+          value={value.pmEnd}
+          onChange={(v) => setField("pmEnd", v)}
           disabled={disabled}
+          required
         />
       </div>
       {preview && (
@@ -76,11 +71,14 @@ export default function OfficialHoursFields({
           Preview: {preview}
         </p>
       )}
+      {validationError && (
+        <p className="text-xs text-red-600 mt-2">{validationError}</p>
+      )}
     </div>
   );
 }
 
-function TimeField({ label, value, onChange, disabled }) {
+function TimeField({ label, value, onChange, disabled, required }) {
   return (
     <div>
       <label className="block text-xs font-medium text-slate-600 mb-1">
@@ -91,6 +89,7 @@ function TimeField({ label, value, onChange, disabled }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
+        required={required}
         className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
       />
     </div>

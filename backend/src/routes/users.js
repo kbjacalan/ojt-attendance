@@ -15,12 +15,8 @@ const {
   UserError,
 } = require("../services/userService");
 
-// All routes here require a logged-in admin
 router.use(authenticate, requireRole("admin"));
 
-// GET /api/users/students?date=YYYY-MM-DD — list all students for the
-// admin table, with attendance status for the given date (defaults
-// to today if not provided).
 router.get("/students", async (req, res) => {
   const { date } = req.query;
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -36,7 +32,6 @@ router.get("/students", async (req, res) => {
   }
 });
 
-// GET /api/users/staff — list in-charge/admin accounts
 router.get("/staff", async (req, res) => {
   try {
     const staff = await listStaff();
@@ -46,7 +41,6 @@ router.get("/staff", async (req, res) => {
   }
 });
 
-// PATCH /api/users/staff/:userId — update an in-charge account's name/email
 router.patch("/staff/:userId", async (req, res) => {
   try {
     const updated = await updateStaffAccount(req.params.userId, req.body);
@@ -56,10 +50,6 @@ router.patch("/staff/:userId", async (req, res) => {
   }
 });
 
-// DELETE /api/users/staff/:userId — permanently deletes an in-charge account.
-// Safe compared to student deletion: agencies.in_charge_id and
-// dtr_periods.certified_by are ON DELETE SET NULL, so no attendance
-// or DTR data is destroyed.
 router.delete("/staff/:userId", async (req, res) => {
   try {
     await deleteStaffAccount(req.params.userId);
@@ -69,7 +59,6 @@ router.delete("/staff/:userId", async (req, res) => {
   }
 });
 
-// POST /api/users — create a new account (student, in_charge, or admin)
 router.post("/", async (req, res) => {
   const {
     email,
@@ -79,7 +68,10 @@ router.post("/", async (req, res) => {
     course,
     agencyId,
     requiredHours,
-    officialHoursText,
+    amStart,
+    amEnd,
+    pmStart,
+    pmEnd,
     university,
     batch,
     ojtStatus,
@@ -114,7 +106,10 @@ router.post("/", async (req, res) => {
       course,
       agencyId,
       requiredHours,
-      officialHoursText,
+      amStart,
+      amEnd,
+      pmStart,
+      pmEnd,
       university,
       batch,
       ojtStatus,
@@ -126,7 +121,6 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PATCH /api/users/students/:studentId — update a student's agency/course/hours
 router.patch("/students/:studentId", async (req, res) => {
   if (
     "batch" in req.body &&
@@ -143,8 +137,6 @@ router.patch("/students/:studentId", async (req, res) => {
   }
 });
 
-// DELETE /api/users/students/:studentId — permanently deletes the student
-// account AND all their attendance/DTR history (cascading delete).
 router.delete("/students/:studentId", async (req, res) => {
   try {
     await deleteStudent(req.params.studentId);
@@ -154,8 +146,6 @@ router.delete("/students/:studentId", async (req, res) => {
   }
 });
 
-// POST /api/users/students/:studentId/approve — approves a self-signed-up
-// student, letting them log in for the first time.
 router.post("/students/:studentId/approve", async (req, res) => {
   try {
     const result = await approveStudent(req.params.studentId);
@@ -165,9 +155,6 @@ router.post("/students/:studentId/approve", async (req, res) => {
   }
 });
 
-// POST /api/users/students/:studentId/reject — rejects a self-signed-up
-// student's registration. Account is kept (not deleted) with status
-// 'rejected', blocking their login with a clear message.
 router.post("/students/:studentId/reject", async (req, res) => {
   try {
     const result = await rejectStudent(req.params.studentId);
@@ -177,7 +164,6 @@ router.post("/students/:studentId/reject", async (req, res) => {
   }
 });
 
-// PATCH /api/users/:userId/status — activate/deactivate an account
 router.patch("/:userId/status", async (req, res) => {
   const { isActive } = req.body;
   if (typeof isActive !== "boolean") {

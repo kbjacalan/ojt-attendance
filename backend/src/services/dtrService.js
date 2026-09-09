@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const { getManilaDateString } = require("../utils/time");
+const { buildOfficialHoursText } = require("../utils/officialHours");
 
 class DTRError extends Error {
   constructor(message, statusCode = 400) {
@@ -8,25 +9,14 @@ class DTRError extends Error {
   }
 }
 
-/**
- * Builds the full DTR data structure for a student for a given month.
- * monthStr format: 'YYYY-MM' (e.g. '2026-07')
- *
- * Returns:
- * {
- *   student: { name, course, agency, officialHours, requiredHours, month, inChargeName, controlNumber },
- *   days: [ { day, status, amIn, amOut, pmIn, pmOut, otIn, otOut, totalHours, certifiedBy } ],
- *   grandTotal: number,
- *   certification: { status, certifiedAt, certifiedByName, signature, totalHours }
- * }
- */
 async function getMonthlyDTR(studentId, monthStr) {
   if (!/^\d{4}-\d{2}$/.test(monthStr)) {
     throw new DTRError("month must be in YYYY-MM format.", 400);
   }
 
   const studentResult = await pool.query(
-    `SELECT u.full_name, sp.course, sp.official_hours_text, sp.required_hours,
+    `SELECT u.full_name, sp.course, sp.required_hours,
+            sp.am_start, sp.am_end, sp.pm_start, sp.pm_end,
             a.name AS agency_name, ic.full_name AS in_charge_name,
             cn.control_number
      FROM student_profiles sp
@@ -44,7 +34,7 @@ async function getMonthlyDTR(studentId, monthStr) {
   const student = studentResult.rows[0];
 
   const [year, month] = monthStr.split("-").map(Number);
-  const daysInMonth = new Date(year, month, 0).getDate(); // month is 1-indexed here, gives last day of that month
+  const daysInMonth = new Date(year, month, 0).getDate();
   const monthStart = `${monthStr}-01`;
   const monthEnd = `${monthStr}-${String(daysInMonth).padStart(2, "0")}`;
 
@@ -77,7 +67,6 @@ async function getMonthlyDTR(studentId, monthStr) {
     holidaysByDay[dayNum] = row.name;
   }
 
-  // Index logs by day number for quick lookup
   const logsByDay = {};
   for (const row of logsResult.rows) {
     const dayNum = new Date(row.log_date).getDate();
@@ -90,7 +79,7 @@ async function getMonthlyDTR(studentId, monthStr) {
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateObj = new Date(year, month - 1, d);
-    const dow = dateObj.getDay(); // 0 = Sunday, 6 = Saturday
+    const dow = dateObj.getDay();
     const dateStr = `${monthStr}-${String(d).padStart(2, "0")}`;
     const log = logsByDay[d];
 
@@ -109,10 +98,6 @@ async function getMonthlyDTR(studentId, monthStr) {
         totalHours,
         certifiedBy: log.certified_by || "",
         remarks: log.remarks || "",
-        // Flags this day as worked on an official holiday — relevant for
-        // premium pay computation (DOLE: 200% for regular holidays worked,
-        // 130% for special non-working days worked). The DTR itself doesn't
-        // compute pay, just surfaces the fact so payroll/HR can act on it.
         isHolidayWorked: Boolean(holidaysByDay[d]),
         holidayName: holidaysByDay[d] || null,
       });
@@ -121,10 +106,8 @@ async function getMonthlyDTR(studentId, monthStr) {
     } else if (dow === 0 || dow === 6) {
       days.push({ day: d, status: "weekend" });
     } else if (dateStr < today) {
-      // Weekday in the past with no record at all = absent
       days.push({ day: d, status: "absent" });
     } else {
-      // Today or future weekday with no record yet — leave blank, not yet due
       days.push({ day: d, status: "pending" });
     }
   }
@@ -135,7 +118,16 @@ async function getMonthlyDTR(studentId, monthStr) {
       course: student.course,
       agency: student.agency_name || "Unassigned",
       controlNumber: student.control_number || "",
-      officialHours: student.official_hours_text || "",
+      officialHours: buildOfficialHoursText({
+        amStart: toHHMM(student.am_start),
+        amEnd: toHHMM(student.am_end),
+        pmStart: toHHMM(student.pm_start),
+        pmEnd: toHHMM(student.pm_end),
+      }),
+      amStart: toHHMM(student.am_start),
+      amEnd: toHHMM(student.am_end),
+      pmStart: toHHMM(student.pm_start),
+      pmEnd: toHHMM(student.pm_end),
       requiredHours: parseFloat(student.required_hours) || 0,
       month: formatMonthLabel(monthStr),
       inChargeName: student.in_charge_name || "",
@@ -163,10 +155,11 @@ async function getMonthlyDTR(studentId, monthStr) {
   };
 }
 
-/**
- * Converts a TIMESTAMPTZ value to a 24-hour "HH:MM" string in Manila time,
- * for the frontend to then format into 12-hour display.
- */
+function toHHMM(time) {
+  if (!time) return "";
+  return time.slice(0, 5);
+}
+
 function toTimeString(timestamp) {
   if (!timestamp) return "";
   const date = new Date(timestamp);

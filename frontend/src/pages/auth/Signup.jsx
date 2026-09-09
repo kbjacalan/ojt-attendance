@@ -7,7 +7,7 @@ import {
   listPublicControlNumbers,
 } from "../../services/authApi";
 import { formatBatchLabel, getCurrentBatchValue } from "../../utils/batch";
-import { buildOfficialHoursText } from "../../utils/officialHours";
+import { validateOfficialHours } from "../../utils/officialHours";
 import PasswordInput from "../../components/common/PasswordInput";
 import AgencySelect from "../../components/common/AgencySelect";
 import ControlNumberSelect from "../../components/common/ControlNumberSelect";
@@ -30,16 +30,17 @@ export default function Signup() {
     agencyId: "",
     controlNumberId: "",
     requiredHours: "",
-    morningIn: "08:00",
-    morningOut: "12:00",
-    afternoonIn: "13:00",
-    afternoonOut: "17:00",
+    amStart: "08:00",
+    amEnd: "12:00",
+    pmStart: "13:00",
+    pmEnd: "17:00",
   });
   const [agencies, setAgencies] = useState([]);
   const [controlNumbers, setControlNumbers] = useState([]);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   useEffect(() => {
     listPublicAgencies()
@@ -49,8 +50,6 @@ export default function Signup() {
       .then(setControlNumbers)
       .catch(() => setControlNumbers([]));
   }, []);
-
-  const officialHoursPreview = buildOfficialHoursText(form);
 
   // Live feedback so a mistyped/mismatched password is caught while
   // filling the form, not only after scrolling back down from a
@@ -64,6 +63,7 @@ export default function Signup() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
+    setAttemptedSubmit(true);
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
@@ -92,6 +92,11 @@ export default function Signup() {
       setError("Please select your OJT control number.");
       return;
     }
+    const officialHoursError = validateOfficialHours(form);
+    if (officialHoursError) {
+      setError(officialHoursError);
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -105,7 +110,10 @@ export default function Signup() {
         agencyId: form.agencyId,
         controlNumberId: form.controlNumberId,
         requiredHours: form.requiredHours || null,
-        officialHoursText: officialHoursPreview || null,
+        amStart: form.amStart,
+        amEnd: form.amEnd,
+        pmStart: form.pmStart,
+        pmEnd: form.pmEnd,
       });
       setSubmitted(true);
     } catch (err) {
@@ -301,6 +309,7 @@ export default function Signup() {
               value={form}
               onChange={(v) => setForm({ ...form, ...v })}
               disabled={submitting}
+              showValidation={attemptedSubmit}
             />
           </FormSection>
 
