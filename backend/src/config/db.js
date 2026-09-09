@@ -5,6 +5,7 @@ const { Pool } = require("pg");
 //   DATABASE_URL=postgresql://user:password@localhost:5432/ojt_attendance
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
 
 module.exports = pool;
