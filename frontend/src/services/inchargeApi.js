@@ -50,3 +50,17 @@ export const correctAttendance = (studentId, dateStr, times, remarks) =>
     method: "PATCH",
     body: JSON.stringify({ ...times, remarks }),
   });
+
+export const listPendingOTRequests = () => request("/incharge/ot-requests");
+
+export const approveOTRequest = (requestId, approvedStart, approvedEnd, note) =>
+  request(`/incharge/ot-requests/${requestId}/approve`, {
+    method: "POST",
+    body: JSON.stringify({ approvedStart, approvedEnd, note }),
+  });
+
+export const rejectOTRequest = (requestId, note) =>
+  request(`/incharge/ot-requests/${requestId}/reject`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
+  });

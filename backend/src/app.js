@@ -8,6 +8,7 @@ const controlNumberRoutes = require("./routes/controlNumbers");
 const dtrRoutes = require("./routes/dtr");
 const inChargeRoutes = require("./routes/incharge");
 const holidayRoutes = require("./routes/holidays");
+const otRequestRoutes = require("./routes/otRequests");
 
 const app = express();
 
@@ -28,5 +29,6 @@ app.use("/api/control-numbers", controlNumberRoutes);
 app.use("/api/dtr", dtrRoutes);
 app.use("/api/incharge", inChargeRoutes);
 app.use("/api/holidays", holidayRoutes);
+app.use("/api/ot-requests", otRequestRoutes);
 
 module.exports = app;

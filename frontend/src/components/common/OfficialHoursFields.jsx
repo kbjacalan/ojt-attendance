@@ -6,6 +6,7 @@ export default function OfficialHoursFields({
   disabled,
   variant = "compact",
   showValidation = false,
+  description = "Regular time in/out — automatically shown in the Official Hours section of the DTR, and used to determine when this student can time in or out.",
 }) {
   const preview = buildOfficialHoursText(value);
   const isSpacious = variant === "spacious";
@@ -33,8 +34,7 @@ export default function OfficialHoursFields({
             : "text-[11px] text-slate-400 mb-2"
         }
       >
-        Regular time in/out — automatically shown in the Official Hours section
-        of the DTR, and used to determine when this student can time in or out.
+        {description}
       </p>
       <div className="grid grid-cols-2 gap-3">
         <TimeField

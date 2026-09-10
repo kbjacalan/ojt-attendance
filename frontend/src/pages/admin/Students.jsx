@@ -878,10 +878,10 @@ function BatchGroup({
                     <td className="px-2 py-1.5 text-slate-600 truncate">
                       <Truncate text={s.course || "—"} />
                     </td>
-                    <td className="px-2 py-1.5 text-slate-600">
+                    <td className="px-2 py-1.5 text-slate-600 truncate">
                       <Truncate text={s.agency_name || "Unassigned"} />
                     </td>
-                    <td className="px-2 py-1.5 text-slate-600">
+                    <td className="px-2 py-1.5 text-slate-600 truncate">
                       <Truncate text={s.control_number || "—"} />
                     </td>
                     <td className="px-2 py-1.5 truncate">

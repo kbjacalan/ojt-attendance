@@ -17,6 +17,7 @@ import AdminStaff from "./pages/admin/Staff";
 import AdminAccount from "./pages/admin/Account";
 import StudentRecords from "./pages/incharge/StudentRecords";
 import StudentDTRReview from "./pages/incharge/StudentDTRReview";
+import OTRequests from "./pages/incharge/OTRequests";
 import AdminStudentDTRReview from "./pages/admin/StudentDTRReview";
 
 function App() {
@@ -153,6 +154,15 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={["in_charge"]}>
                 <StudentDTRReview />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/incharge/ot-requests"
+            element={
+              <ProtectedRoute allowedRoles={["in_charge"]}>
+                <OTRequests />
               </ProtectedRoute>
             }
           />

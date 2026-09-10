@@ -11,8 +11,9 @@ import {
   Search,
   X,
   GraduationCap,
+  Clock,
 } from "lucide-react";
-import { listMyStudents } from "../../services/inchargeApi";
+import { listMyStudents, listPendingOTRequests } from "../../services/inchargeApi";
 import DutyStatusBadge from "../../components/common/DutyStatusBadge";
 import { formatBatchLabel } from "../../utils/batch";
 
@@ -111,6 +112,7 @@ export default function StudentRecords() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pendingOtCount, setPendingOtCount] = useState(0);
 
   // Search, filters & sorting
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,6 +133,10 @@ export default function StudentRecords() {
     loadStudents(selectedDate);
   }, [selectedDate]);
 
+  useEffect(() => {
+    loadPendingOtCount();
+  }, []);
+
   // ----- Real-time updates -----
   // There's no push/websocket channel from the backend, so we keep the
   // list fresh by polling in the background and by refetching whenever
@@ -138,15 +144,19 @@ export default function StudentRecords() {
   // to this tab after a new student/batch was added elsewhere). Both
   // use the "silent" loadStudents path so they never flash the
   // full-page loading spinner or clobber the UI with a transient error.
+  // The overtime badge rides along on the same cadence so it stays
+  // genuinely live rather than only reflecting the count at page load.
   useEffect(() => {
     const POLL_INTERVAL_MS = 15000;
     const intervalId = setInterval(() => {
       loadStudents(selectedDate, { silent: true });
+      loadPendingOtCount();
     }, POLL_INTERVAL_MS);
 
     function handleFocusOrVisible() {
       if (document.visibilityState === "hidden") return;
       loadStudents(selectedDate, { silent: true });
+      loadPendingOtCount();
     }
     document.addEventListener("visibilitychange", handleFocusOrVisible);
     window.addEventListener("focus", handleFocusOrVisible);
@@ -174,6 +184,15 @@ export default function StudentRecords() {
       }
     } finally {
       if (!silent) setLoading(false);
+    }
+  }
+
+  async function loadPendingOtCount() {
+    try {
+      const data = await listPendingOTRequests();
+      setPendingOtCount(data.length);
+    } catch (err) {
+      console.error("Failed to load OT request count:", err);
     }
   }
 
@@ -366,6 +385,29 @@ export default function StudentRecords() {
             {error}
           </div>
         )}
+
+        <div className="flex items-center gap-2 mb-4 overflow-x-auto flex-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <Link
+            to="/incharge/ot-requests"
+            className={`inline-flex items-center shrink-0 gap-1.5 rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors ${
+              pendingOtCount > 0
+                ? "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            <Clock className="w-4 h-4 shrink-0" />
+            Overtime Requests
+            <span
+              className={`inline-flex items-center justify-center min-w-[16px] sm:min-w-[18px] h-[16px] sm:h-[18px] px-1 rounded-full text-[9px] sm:text-[10px] font-semibold leading-none ${
+                pendingOtCount > 0
+                  ? "bg-amber-400 text-amber-900"
+                  : "bg-slate-200 text-slate-600"
+              }`}
+            >
+              {pendingOtCount}
+            </span>
+          </Link>
+        </div>
 
         {/* Search, filters & sorting */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 space-y-3">
@@ -576,13 +618,13 @@ function BatchGroup({
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-xs table-fixed">
               <colgroup>
-                <col style={{ width: "20%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "19%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "17%" }} />
                 <col style={{ width: "15%" }} />
                 <col style={{ width: "12%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "12%" }} />
+                <col style={{ width: "7%" }} />
               </colgroup>
               <thead className="bg-slate-50 text-slate-500 text-left border-t border-slate-100">
                 <tr>

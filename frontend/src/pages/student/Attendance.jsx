@@ -9,12 +9,14 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import TimeInOutButton from "../../components/attendance/TimeInOutButton";
+import OvertimeRequestPanel from "../../components/attendance/OvertimeRequestPanel";
 import AttendanceMap from "../../components/attendance/AttendanceMap";
 import DutyStatusBadge from "../../components/common/DutyStatusBadge";
 import { useAuth } from "../../context/AuthContext";
 import { useWatchGeolocation } from "../../hooks/useWatchGeolocation";
 import { getMyDTR } from "../../services/dtrApi";
 import { getMyAgency } from "../../services/api";
+import { getMyTodayOTRequest } from "../../services/otApi";
 import { isWithinGeofence } from "../../utils/geo";
 import {
   computeDutyStatusFromDay,
@@ -87,6 +89,8 @@ export default function Attendance() {
   const [agencyLoading, setAgencyLoading] = useState(true);
   const [agencyError, setAgencyError] = useState(null);
 
+  const [otRequest, setOtRequest] = useState(null);
+
   const loadDTR = useCallback(async () => {
     try {
       setLoadError(null);
@@ -99,9 +103,22 @@ export default function Attendance() {
     }
   }, []);
 
+  const loadOtRequest = useCallback(async () => {
+    try {
+      const data = await getMyTodayOTRequest();
+      setOtRequest(data);
+    } catch (err) {
+      console.error("Failed to load today's overtime request:", err);
+    }
+  }, []);
+
   useEffect(() => {
     loadDTR();
   }, [loadDTR]);
+
+  useEffect(() => {
+    loadOtRequest();
+  }, [loadOtRequest]);
 
   useEffect(() => {
     getMyAgency()
@@ -317,6 +334,12 @@ export default function Attendance() {
                 amEnd: dtr?.student?.amEnd,
                 pmStart: dtr?.student?.pmStart,
                 pmEnd: dtr?.student?.pmEnd,
+                ...(otRequest?.status === "approved"
+                  ? {
+                      otStart: otRequest.approved_start.slice(0, 5),
+                      otEnd: otRequest.approved_end.slice(0, 5),
+                    }
+                  : {}),
               }}
               onPunchSuccess={loadDTR}
               disabledReason={disabledReason}
@@ -324,6 +347,20 @@ export default function Attendance() {
               isUnassigned={isUnassigned}
               hasNeverPunched={hasNeverPunched}
               agencyName={agency?.name}
+            />
+          )}
+
+          {!loading && !isUnassigned && (
+            <OvertimeRequestPanel
+              todayRequest={otRequest}
+              onRequestChange={loadOtRequest}
+              isUnassigned={isUnassigned}
+              officialHours={{
+                amStart: dtr?.student?.amStart,
+                amEnd: dtr?.student?.amEnd,
+                pmStart: dtr?.student?.pmStart,
+                pmEnd: dtr?.student?.pmEnd,
+              }}
             />
           )}
 

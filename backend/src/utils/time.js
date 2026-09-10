@@ -43,6 +43,7 @@ const GRACE_MINUTES = 10;
 const PERIOD_BOUNDS = {
   morning: { startKey: "amStart", endKey: "amEnd" },
   afternoon: { startKey: "pmStart", endKey: "pmEnd" },
+  overtime: { startKey: "otStart", endKey: "otEnd" },
 };
 
 function isPeriodWindowOpen(period, schedule, date = new Date()) {

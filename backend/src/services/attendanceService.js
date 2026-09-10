@@ -7,10 +7,15 @@ const {
   isPeriodWindowClosed,
 } = require("../utils/time");
 const { syncOjtStatus } = require("./userService");
+const { getTodayRequest } = require("./otRequestService");
 
-const PERIOD_LABEL = { morning: "morning (AM)", afternoon: "afternoon (PM)" };
+const PERIOD_LABEL = {
+  morning: "morning (AM)",
+  afternoon: "afternoon (PM)",
+  overtime: "overtime (OT)",
+};
 
-const SELECTABLE_PERIODS = ["morning", "afternoon"];
+const SELECTABLE_PERIODS = ["morning", "afternoon", "overtime"];
 
 const PERIOD_COLUMNS = {
   morning: {
@@ -84,6 +89,34 @@ function requireCompleteSchedule(agency) {
   return schedule;
 }
 
+/**
+ * Overtime has no fixed daily schedule — its "window" is whatever the
+ * student's in-charge approved for today via an ot_requests row. This
+ * builds the same { otStart, otEnd } shape isPeriodWindowOpen/Closed
+ * already expects (see PERIOD_BOUNDS.overtime in utils/time.js).
+ */
+async function requireApprovedOvertimeWindow(studentId) {
+  const request = await getTodayRequest(studentId);
+  if (!request || request.status !== "approved") {
+    throw new AttendanceError(
+      "You don't have an approved overtime request for today. Ask your in-charge to approve one first.",
+      409,
+      "OT_NOT_APPROVED",
+    );
+  }
+  return {
+    otStart: request.approved_start.slice(0, 5),
+    otEnd: request.approved_end.slice(0, 5),
+  };
+}
+
+async function resolveScheduleForPeriod(period, agency, studentId) {
+  if (period === "overtime") {
+    return requireApprovedOvertimeWindow(studentId);
+  }
+  return requireCompleteSchedule(agency);
+}
+
 async function getOrCreateTodayLog(studentId, agencyId) {
   const today = getManilaDateString();
 
@@ -115,13 +148,13 @@ async function getMyAgencyGeofence(studentId) {
 async function timeIn({ studentId, latitude, longitude, period }) {
   if (!SELECTABLE_PERIODS.includes(period)) {
     throw new AttendanceError(
-      "period must be 'morning' (AM) or 'afternoon' (PM).",
+      "period must be 'morning' (AM), 'afternoon' (PM), or 'overtime' (OT).",
       400,
     );
   }
 
   const agency = await getStudentAgency(studentId);
-  const schedule = requireCompleteSchedule(agency);
+  const schedule = await resolveScheduleForPeriod(period, agency, studentId);
 
   const { withinRadius, distanceMeters } = isWithinGeofence(
     latitude,
@@ -192,13 +225,13 @@ async function timeIn({ studentId, latitude, longitude, period }) {
 async function timeOut({ studentId, latitude, longitude, period }) {
   if (!SELECTABLE_PERIODS.includes(period)) {
     throw new AttendanceError(
-      "period must be 'morning' (AM) or 'afternoon' (PM).",
+      "period must be 'morning' (AM), 'afternoon' (PM), or 'overtime' (OT).",
       400,
     );
   }
 
   const agency = await getStudentAgency(studentId);
-  const schedule = requireCompleteSchedule(agency);
+  const schedule = await resolveScheduleForPeriod(period, agency, studentId);
 
   const { withinRadius, distanceMeters } = isWithinGeofence(
     latitude,

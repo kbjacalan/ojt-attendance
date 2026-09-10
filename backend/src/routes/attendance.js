@@ -28,15 +28,15 @@ function validateCoordinates(req, res, next) {
 
 function validatePeriod(req, res, next) {
   const { period } = req.body;
-  if (!["morning", "afternoon"].includes(period)) {
-    return res
-      .status(400)
-      .json({ error: "period must be 'morning' (AM) or 'afternoon' (PM)." });
+  if (!["morning", "afternoon", "overtime"].includes(period)) {
+    return res.status(400).json({
+      error: "period must be 'morning' (AM), 'afternoon' (PM), or 'overtime' (OT).",
+    });
   }
   next();
 }
 
-const PERIOD_LABEL = { morning: "AM", afternoon: "PM" };
+const PERIOD_LABEL = { morning: "AM", afternoon: "PM", overtime: "OT" };
 
 router.post(
   "/time-in",

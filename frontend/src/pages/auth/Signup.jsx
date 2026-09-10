@@ -310,6 +310,7 @@ export default function Signup() {
               onChange={(v) => setForm({ ...form, ...v })}
               disabled={submitting}
               showValidation={attemptedSubmit}
+              description="Your regular time in/out will automatically appear in your DTR's Official Hours section. Adjust it if your OJT schedule is different."
             />
           </FormSection>
 

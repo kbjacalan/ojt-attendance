@@ -8,6 +8,12 @@ const {
   uncertifyDTR,
   InChargeError,
 } = require("../services/inChargeService");
+const {
+  listPendingForInCharge,
+  approveRequest,
+  rejectRequest,
+  OTRequestError,
+} = require("../services/otRequestService");
 
 router.use(authenticate, requireRole("in_charge"));
 
@@ -89,6 +95,48 @@ router.post("/students/:studentId/uncertify", async (req, res) => {
   }
 });
 
+// GET /api/incharge/ot-requests — pending overtime requests for
+// students under this in-charge's agencies, oldest first.
+router.get("/ot-requests", async (req, res) => {
+  try {
+    const requests = await listPendingForInCharge(req.user.userId);
+    res.json(requests);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+// POST /api/incharge/ot-requests/:id/approve  { approvedStart?, approvedEnd?, note? }
+router.post("/ot-requests/:id/approve", async (req, res) => {
+  const { approvedStart, approvedEnd, note } = req.body;
+  try {
+    const request = await approveRequest({
+      requestId: req.params.id,
+      inChargeUserId: req.user.userId,
+      approvedStart,
+      approvedEnd,
+      note,
+    });
+    res.json(request);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
+// POST /api/incharge/ot-requests/:id/reject  { note }
+router.post("/ot-requests/:id/reject", async (req, res) => {
+  try {
+    const request = await rejectRequest({
+      requestId: req.params.id,
+      inChargeUserId: req.user.userId,
+      note: req.body.note,
+    });
+    res.json(request);
+  } catch (err) {
+    handleError(err, res);
+  }
+});
+
 function getCurrentMonthStr() {
   const now = new Date();
   return new Intl.DateTimeFormat("en-CA", {
@@ -99,8 +147,10 @@ function getCurrentMonthStr() {
 }
 
 function handleError(err, res) {
-  if (err instanceof InChargeError) {
-    return res.status(err.statusCode).json({ error: err.message });
+  if (err instanceof InChargeError || err instanceof OTRequestError) {
+    return res
+      .status(err.statusCode)
+      .json({ error: err.message, code: err.code || undefined });
   }
   console.error(err);
   res.status(500).json({ error: "Internal server error." });

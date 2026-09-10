@@ -75,6 +75,7 @@ export const GRACE_MINUTES = 10;
 const PERIOD_BOUNDS = {
   morning: { startKey: "amStart", endKey: "amEnd" },
   afternoon: { startKey: "pmStart", endKey: "pmEnd" },
+  overtime: { startKey: "otStart", endKey: "otEnd" },
 };
 
 export function isPeriodWindowOpen(period, schedule, date = new Date()) {
@@ -113,6 +114,13 @@ export function getMissedPeriods(todayDay, schedule, date = new Date()) {
     { value: "morning", inKey: "amIn", outKey: "amOut" },
     { value: "afternoon", inKey: "pmIn", outKey: "pmOut" },
   ];
+
+  // Overtime only has a window on days with an approved OT request, so
+  // it's only checked (and can only be "missed") when the caller has
+  // put otStart/otEnd on the schedule object for today.
+  if (schedule?.otStart && schedule?.otEnd) {
+    periods.push({ value: "overtime", inKey: "otIn", outKey: "otOut" });
+  }
 
   for (const { value, inKey, outKey } of periods) {
     if (!isPeriodWindowClosed(value, schedule, date)) continue;
