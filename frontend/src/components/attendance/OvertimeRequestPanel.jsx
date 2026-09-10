@@ -8,7 +8,6 @@ import {
   X,
 } from "lucide-react";
 import { requestOvertime, cancelOvertimeRequest } from "../../services/otApi";
-import { GRACE_MINUTES } from "../../utils/dutyStatusFromDay";
 
 function to12Hour(time24) {
   if (!time24) return "";
@@ -17,21 +16,6 @@ function to12Hour(time24) {
   const period = h >= 12 ? "PM" : "AM";
   h = h % 12 || 12;
   return `${h}:${mStr} ${period}`;
-}
-
-// Mirrors TimeInOutButton's grace-period math so the "opens at / closes
-// at" wording here matches what the actual Time In/Out button will
-// enforce — the punch window is officially open GRACE_MINUTES before
-// the approved start and stays open GRACE_MINUTES after the approved
-// end.
-function shiftMinutes(time24, minutes) {
-  if (!time24) return time24;
-  const [hStr, mStr] = time24.slice(0, 5).split(":");
-  const total = parseInt(hStr, 10) * 60 + parseInt(mStr, 10) + minutes;
-  const clamped = ((total % 1440) + 1440) % 1440;
-  const h = Math.floor(clamped / 60);
-  const m = clamped % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 const STATUS_STYLES = {
@@ -171,19 +155,6 @@ export default function OvertimeRequestPanel({
                 ? `${to12Hour(todayRequest.approved_start)} – ${to12Hour(todayRequest.approved_end)}`
                 : `${to12Hour(todayRequest.requested_start)} – ${to12Hour(todayRequest.requested_end)} requested`}
             </p>
-            {todayRequest.status === "approved" && (
-              <p className="mt-1 text-[13px] opacity-90">
-                Your overtime shift opens at{" "}
-                {to12Hour(
-                  shiftMinutes(todayRequest.approved_start, -GRACE_MINUTES),
-                )}{" "}
-                and closes at{" "}
-                {to12Hour(
-                  shiftMinutes(todayRequest.approved_end, GRACE_MINUTES),
-                )}
-                .
-              </p>
-            )}
             {todayRequest.status === "rejected" && todayRequest.review_note && (
               <p className="mt-1 text-[13px] opacity-90">
                 {todayRequest.review_note}
