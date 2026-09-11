@@ -248,9 +248,7 @@ export default function Holidays() {
 function HolidayForm({ holiday, onClose, onCreated }) {
   const isEditing = Boolean(holiday);
   const [form, setForm] = useState({
-    holidayDate: holiday
-      ? new Date(holiday.holiday_date).toISOString().slice(0, 10)
-      : "",
+    holidayDate: holiday ? holiday.holiday_date.slice(0, 10) : "",
     name: holiday?.name || "",
     isNational: holiday ? holiday.is_national : true,
   });

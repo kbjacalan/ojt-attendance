@@ -29,10 +29,15 @@ export function computeDutyStatusFromDay(day) {
 
   let lastPunchLabel = null;
   let lastPunchTime = null;
+  let lastPunchTimestamp = null;
   for (const [key, label] of periods) {
     if (day[key]) {
-      lastPunchLabel = label;
-      lastPunchTime = day[key];
+      const ts = new Date(day[key]);
+      if (!lastPunchTimestamp || ts > lastPunchTimestamp) {
+        lastPunchTimestamp = ts;
+        lastPunchLabel = label;
+        lastPunchTime = day[key];
+      }
     }
   }
 

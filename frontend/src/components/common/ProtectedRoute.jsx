@@ -1,5 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { getHomeRouteForRole } from "../../utils/roleRoutes";
 
 /**
  * Wraps a page to require authentication, and optionally a specific role.
@@ -24,7 +25,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={getHomeRouteForRole(user.role)} replace />;
   }
 
   return children;

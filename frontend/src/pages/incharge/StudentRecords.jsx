@@ -16,6 +16,7 @@ import {
 import { listMyStudents, listPendingOTRequests } from "../../services/inchargeApi";
 import DutyStatusBadge from "../../components/common/DutyStatusBadge";
 import { formatBatchLabel } from "../../utils/batch";
+import { getManilaDateString } from "../../utils/manilaDate";
 
 const OJT_STATUS_LABELS = {
   pending: "Pending",
@@ -39,8 +40,7 @@ const SORT_OPTIONS = [
 ];
 
 function getTodayValue() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return getManilaDateString();
 }
 
 function sortStudents(list, sortBy) {
@@ -93,16 +93,22 @@ function compareBatchKeysDesc(a, b) {
  * batches at all. Returns null for an empty list.
  */
 function getLatestBatchKey(list) {
-  let latest = null;
+  let latestKey = null;
+  let latestCreatedAt = null;
   let hasAny = false;
+
   for (const s of list) {
     hasAny = true;
     const key = s.batch && s.batch.trim() ? s.batch : null;
-    if (key && (latest === null || key.localeCompare(latest) > 0)) {
-      latest = key;
+    if (!key) continue;
+    const createdAt = s.created_at ? new Date(s.created_at).getTime() : 0;
+    if (latestCreatedAt === null || createdAt > latestCreatedAt) {
+      latestCreatedAt = createdAt;
+      latestKey = key;
     }
   }
-  if (latest !== null) return latest;
+
+  if (latestKey !== null) return latestKey;
   return hasAny ? "Unassigned" : null;
 }
 

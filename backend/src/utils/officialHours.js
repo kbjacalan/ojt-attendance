@@ -56,4 +56,5 @@ module.exports = {
   TIME_FIELDS,
   validateOfficialHours,
   buildOfficialHoursText,
+  to12Hour,
 };

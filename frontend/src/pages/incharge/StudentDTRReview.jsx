@@ -22,6 +22,7 @@ import ConfirmModal from "../../components/common/ConfirmModal";
 import SignaturePad from "../../components/common/SignaturePad";
 import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
+import { getManilaMonthString } from "../../utils/manilaDate";
 
 function to12HourNoSuffix(time24) {
   if (!time24) return "";
@@ -45,8 +46,7 @@ function to12Hour(time24) {
 }
 
 function getCurrentMonthValue() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return getManilaMonthString();
 }
 
 export default function StudentDTRReview() {
@@ -722,7 +722,15 @@ function CorrectionModal({ day, month, studentId, onClose, onSaved }) {
         otIn: form.otIn || null,
         otOut: form.otOut || null,
       };
-      await correctAttendance(studentId, dateStr, times, form.remarks);
+      const result = await correctAttendance(
+        studentId,
+        dateStr,
+        times,
+        form.remarks,
+      );
+      if (result.warnings && result.warnings.length > 0) {
+        window.alert(result.warnings.join("\n"));
+      }
       onSaved();
     } catch (err) {
       setError(err.message);

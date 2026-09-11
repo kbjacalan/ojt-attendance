@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { getMyDTR } from "../../services/dtrApi";
 import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
+import { getManilaMonthString } from "../../utils/manilaDate";
 
 /** Converts "HH:MM" 24-hour string to "h:mm" without AM/PM (for Morning/Afternoon columns). */
 function to12HourNoSuffix(time24) {
@@ -35,8 +36,7 @@ function to12Hour(time24) {
 }
 
 function getCurrentMonthValue() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return getManilaMonthString();
 }
 
 export default function DTRView() {

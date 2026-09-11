@@ -1,3 +1,5 @@
+import { notifySessionExpired } from "./sessionEvents";
+
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api";
 
@@ -20,6 +22,9 @@ async function request(path, options = {}) {
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
+    if (res.status === 401 && token) {
+      notifySessionExpired();
+    }
     const error = new Error(
       data.error || "Something went wrong. Please try again.",
     );

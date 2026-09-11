@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const { getManilaDateString } = require("../utils/time");
+const { to12Hour } = require("../utils/officialHours");
 
 class OTRequestError extends Error {
   constructor(message, statusCode = 400, code = null) {
@@ -41,7 +42,7 @@ function assertNoOverlapWithOfficialHours(
     rangesOverlap(requestedStart, requestedEnd, am_start, am_end)
   ) {
     throw new OTRequestError(
-      `That overlaps your official morning hours (${am_start.slice(0, 5)}–${am_end.slice(0, 5)}). Overtime can't overlap your regular shift.`,
+      `That overlaps your official morning hours (${to12Hour(am_start.slice(0, 5))}–${to12Hour(am_end.slice(0, 5))}). Overtime can't overlap your regular shift.`,
       400,
       "OT_OVERLAPS_OFFICIAL_HOURS",
     );
@@ -52,7 +53,7 @@ function assertNoOverlapWithOfficialHours(
     rangesOverlap(requestedStart, requestedEnd, pm_start, pm_end)
   ) {
     throw new OTRequestError(
-      `That overlaps your official afternoon hours (${pm_start.slice(0, 5)}–${pm_end.slice(0, 5)}). Overtime can't overlap your regular shift.`,
+      `That overlaps your official afternoon hours (${to12Hour(pm_start.slice(0, 5))}–${to12Hour(pm_end.slice(0, 5))}). Overtime can't overlap your regular shift.`,
       400,
       "OT_OVERLAPS_OFFICIAL_HOURS",
     );

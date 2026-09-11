@@ -19,6 +19,18 @@ function getManilaHour(date = new Date()) {
   return hour === 24 ? 0 : hour;
 }
 
+function getManilaMinutesSinceMidnight(date = new Date()) {
+  const timeStr = new Intl.DateTimeFormat("en-US", {
+    timeZone: MANILA_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+  let [hour, minute] = timeStr.split(":").map((part) => parseInt(part, 10));
+  if (hour === 24) hour = 0;
+  return hour * 60 + minute;
+}
+
 function hoursBetween(startDate, endDate) {
   const ms = new Date(endDate).getTime() - new Date(startDate).getTime();
   return Math.max(ms / (1000 * 60 * 60), 0);
@@ -27,6 +39,7 @@ function hoursBetween(startDate, endDate) {
 module.exports = {
   getManilaDateString,
   getManilaHour,
+  getManilaMinutesSinceMidnight,
   hoursBetween,
   MANILA_TZ,
 };

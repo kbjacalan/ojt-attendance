@@ -38,6 +38,7 @@ import ControlNumberSelect from "../../components/common/ControlNumberSelect";
 import OfficialHoursFields from "../../components/common/OfficialHoursFields";
 import { formatBatchLabel } from "../../utils/batch";
 import { validateOfficialHours } from "../../utils/officialHours";
+import { getManilaDateString } from "../../utils/manilaDate";
 
 const OJT_STATUS_LABELS = {
   pending: "Pending",
@@ -63,8 +64,7 @@ const SORT_OPTIONS = [
 ];
 
 function getTodayValue() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return getManilaDateString();
 }
 
 function sortStudents(list, sortBy) {
@@ -121,16 +121,22 @@ function compareBatchKeysDesc(a, b) {
  * batches at all. Returns null for an empty list.
  */
 function getLatestBatchKey(list) {
-  let latest = null;
+  let latestKey = null;
+  let latestCreatedAt = null;
   let hasAny = false;
+
   for (const s of list) {
     hasAny = true;
     const key = s.batch && s.batch.trim() ? s.batch : null;
-    if (key && (latest === null || key.localeCompare(latest) > 0)) {
-      latest = key;
+    if (!key) continue;
+    const createdAt = s.created_at ? new Date(s.created_at).getTime() : 0;
+    if (latestCreatedAt === null || createdAt > latestCreatedAt) {
+      latestCreatedAt = createdAt;
+      latestKey = key;
     }
   }
-  if (latest !== null) return latest;
+
+  if (latestKey !== null) return latestKey;
   return hasAny ? "Unassigned" : null;
 }
 
@@ -1214,6 +1220,12 @@ function StudentForm({ agencies, controlNumbers, onClose, onCreated }) {
     setError(null);
     setAttemptedSubmit(true);
 
+    if (!(Number(form.requiredHours) > 0)) {
+      setError("Required Hours must be a positive number.");
+      setSubmitting(false);
+      return;
+    }
+
     const officialHoursError = validateOfficialHours(form);
     if (officialHoursError) {
       setError(officialHoursError);
@@ -1296,6 +1308,7 @@ function StudentForm({ agencies, controlNumbers, onClose, onCreated }) {
           value={form.requiredHours}
           onChange={(v) => setForm({ ...form, requiredHours: v })}
           type="number"
+          min="1"
         />
 
         <div>
@@ -1377,13 +1390,14 @@ function EditStudentForm({
   onClose,
   onSaved,
 }) {
+  const initialOjtStatus = student.ojt_status || "active";
   const [form, setForm] = useState({
     fullName: student.full_name || "",
     email: student.email || "",
     course: student.course || "",
     university: student.university || "",
     batch: student.batch || "",
-    ojtStatus: student.ojt_status || "active",
+    ojtStatus: initialOjtStatus,
     agencyId: student.agency_id || "",
     controlNumberId: student.control_number_id || "",
     requiredHours: student.required_hours || 486,
@@ -1410,6 +1424,12 @@ function EditStudentForm({
     setError(null);
     setAttemptedSubmit(true);
 
+    if (!(Number(form.requiredHours) > 0)) {
+      setError("Required Hours must be a positive number.");
+      setSubmitting(false);
+      return;
+    }
+
     const officialHoursError = validateOfficialHours(form);
     if (officialHoursError) {
       setError(officialHoursError);
@@ -1418,13 +1438,12 @@ function EditStudentForm({
     }
 
     try {
-      await updateStudentProfile(student.student_id, {
+      const payload = {
         fullName: form.fullName,
         email: form.email,
         course: form.course,
         university: form.university || null,
         batch: form.batch || null,
-        ojtStatus: form.ojtStatus,
         agencyId: form.agencyId || null,
         controlNumberId: form.controlNumberId || null,
         requiredHours: parseFloat(form.requiredHours),
@@ -1432,7 +1451,11 @@ function EditStudentForm({
         amEnd: form.amEnd,
         pmStart: form.pmStart,
         pmEnd: form.pmEnd,
-      });
+      };
+      if (form.ojtStatus !== initialOjtStatus) {
+        payload.ojtStatus = form.ojtStatus;
+      }
+      await updateStudentProfile(student.student_id, payload);
       onSaved();
     } catch (err) {
       setError(err.message);
@@ -1483,6 +1506,7 @@ function EditStudentForm({
           value={form.requiredHours}
           onChange={(v) => setForm({ ...form, requiredHours: v })}
           type="number"
+          min="1"
         />
 
         <div>
@@ -1560,6 +1584,7 @@ function Field({
   required,
   type = "text",
   placeholder,
+  min,
 }) {
   return (
     <div>
@@ -1572,6 +1597,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         required={required}
         placeholder={placeholder}
+        min={min}
         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
       />
     </div>

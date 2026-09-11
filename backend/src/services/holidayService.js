@@ -7,18 +7,32 @@ class HolidayError extends Error {
   }
 }
 
+function toDateOnlyString(value) {
+  if (!value) return value;
+  const d = new Date(value);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeHoliday(row) {
+  if (!row) return row;
+  return { ...row, holiday_date: toDateOnlyString(row.holiday_date) };
+}
+
 async function listHolidays(year) {
   if (year) {
     const { rows } = await pool.query(
       `SELECT * FROM holidays WHERE EXTRACT(YEAR FROM holiday_date) = $1 ORDER BY holiday_date ASC`,
       [year],
     );
-    return rows;
+    return rows.map(normalizeHoliday);
   }
   const { rows } = await pool.query(
     `SELECT * FROM holidays ORDER BY holiday_date ASC`,
   );
-  return rows;
+  return rows.map(normalizeHoliday);
 }
 
 async function createHoliday({ holidayDate, name, isNational }) {
@@ -29,7 +43,7 @@ async function createHoliday({ holidayDate, name, isNational }) {
        RETURNING *`,
       [holidayDate, name, isNational !== false],
     );
-    return rows[0];
+    return normalizeHoliday(rows[0]);
   } catch (err) {
     if (err.code === "23505") {
       throw new HolidayError(
@@ -54,7 +68,7 @@ async function updateHoliday(id, { holidayDate, name, isNational }) {
   if (rows.length === 0) {
     throw new HolidayError("Holiday not found.", 404);
   }
-  return rows[0];
+  return normalizeHoliday(rows[0]);
 }
 
 async function deleteHoliday(id) {

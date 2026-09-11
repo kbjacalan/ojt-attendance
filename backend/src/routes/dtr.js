@@ -26,7 +26,7 @@ router.get("/", authenticate, requireRole("student"), async (req, res) => {
 router.get(
   "/student/:studentId",
   authenticate,
-  requireRole("admin", "in_charge"),
+  requireRole("admin"),
   async (req, res) => {
     const month = req.query.month || getCurrentMonthStr();
 

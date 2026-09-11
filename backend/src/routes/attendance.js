@@ -138,7 +138,7 @@ router.patch(
         await assertStudentBelongsToInCharge(studentId, req.user.userId);
       }
 
-      const updatedLog = await correctAttendanceLog({
+      const { warnings, ...updatedLog } = await correctAttendanceLog({
         studentId,
         dateStr: date,
         times,
@@ -149,6 +149,7 @@ router.patch(
       res.json({
         message: "Attendance corrected successfully.",
         log: updatedLog,
+        warnings,
       });
     } catch (err) {
       handleError(err, res);

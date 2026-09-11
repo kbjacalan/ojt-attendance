@@ -76,10 +76,16 @@ async function updateAgency(id, updates) {
     values.push(updates.address);
   }
   if ("latitude" in updates) {
+    if (updates.latitude < -90 || updates.latitude > 90) {
+      throw new AgencyError("Invalid coordinates.", 400);
+    }
     setClauses.push(`latitude = $${idx++}`);
     values.push(updates.latitude);
   }
   if ("longitude" in updates) {
+    if (updates.longitude < -180 || updates.longitude > 180) {
+      throw new AgencyError("Invalid coordinates.", 400);
+    }
     setClauses.push(`longitude = $${idx++}`);
     values.push(updates.longitude);
   }

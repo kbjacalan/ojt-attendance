@@ -96,6 +96,17 @@ router.post("/", async (req, res) => {
   if (batch && !/^\d{4}-\d{2}$/.test(batch)) {
     return res.status(400).json({ error: "batch must be in YYYY-MM format." });
   }
+  if (
+    role === "student" &&
+    requiredHours !== undefined &&
+    requiredHours !== null &&
+    requiredHours !== "" &&
+    (isNaN(Number(requiredHours)) || Number(requiredHours) <= 0)
+  ) {
+    return res
+      .status(400)
+      .json({ error: "requiredHours must be a positive number." });
+  }
 
   try {
     const result = await createUser({
@@ -128,6 +139,18 @@ router.patch("/students/:studentId", async (req, res) => {
     !/^\d{4}-\d{2}$/.test(req.body.batch)
   ) {
     return res.status(400).json({ error: "batch must be in YYYY-MM format." });
+  }
+  if (
+    "requiredHours" in req.body &&
+    req.body.requiredHours !== undefined &&
+    req.body.requiredHours !== null &&
+    req.body.requiredHours !== "" &&
+    (isNaN(Number(req.body.requiredHours)) ||
+      Number(req.body.requiredHours) <= 0)
+  ) {
+    return res
+      .status(400)
+      .json({ error: "requiredHours must be a positive number." });
   }
   try {
     const updated = await updateStudentProfile(req.params.studentId, req.body);

@@ -19,7 +19,7 @@ async function listMyStudents(inChargeUserId, dateStr) {
   const targetDate = dateStr || getManilaDateString();
 
   const { rows } = await pool.query(
-    `SELECT sp.id AS student_id, u.full_name, u.email, sp.course,
+    `SELECT sp.id AS student_id, u.full_name, u.email, u.created_at, sp.course,
             sp.university, sp.batch, sp.ojt_status,
             a.id AS agency_id, a.name AS agency_name,
             cn.id AS control_number_id, cn.control_number,

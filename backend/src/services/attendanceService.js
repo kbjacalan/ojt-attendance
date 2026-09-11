@@ -1,6 +1,11 @@
 const pool = require("../config/db");
 const { isWithinGeofence } = require("../utils/geo");
-const { getManilaDateString, hoursBetween } = require("../utils/time");
+const {
+  getManilaDateString,
+  getManilaMinutesSinceMidnight,
+  hoursBetween,
+} = require("../utils/time");
+const { to12Hour } = require("../utils/officialHours");
 const { syncOjtStatus } = require("./userService");
 const { getTodayRequest } = require("./otRequestService");
 
@@ -97,9 +102,29 @@ async function requireApprovedOvertimeWindow(studentId) {
   };
 }
 
+function minutesFromHHMM(str) {
+  const [hour, minute] = str.split(":").map((part) => parseInt(part, 10));
+  return hour * 60 + minute;
+}
+
+function requireWithinOvertimeWindow(window) {
+  const nowMinutes = getManilaMinutesSinceMidnight();
+  const startMinutes = minutesFromHHMM(window.otStart);
+  const endMinutes = minutesFromHHMM(window.otEnd);
+  if (nowMinutes < startMinutes || nowMinutes > endMinutes) {
+    throw new AttendanceError(
+      `Overtime punches are only allowed between ${to12Hour(window.otStart)} and ${to12Hour(window.otEnd)}, per your approved request.`,
+      409,
+      "OT_OUTSIDE_WINDOW",
+    );
+  }
+}
+
 async function resolveScheduleForPeriod(period, agency, studentId) {
   if (period === "overtime") {
-    return requireApprovedOvertimeWindow(studentId);
+    const window = await requireApprovedOvertimeWindow(studentId);
+    requireWithinOvertimeWindow(window);
+    return window;
   }
   return requireCompleteSchedule(agency);
 }
@@ -306,6 +331,56 @@ function manilaTimeToDate(dateStr, timeStr) {
   );
 }
 
+function buildConsistencyWarnings(updatedTimes) {
+  const warnings = [];
+  const amComplete = Boolean(
+    updatedTimes.am_time_in && updatedTimes.am_time_out,
+  );
+  const pmComplete = Boolean(
+    updatedTimes.pm_time_in && updatedTimes.pm_time_out,
+  );
+  const hasPmPunch = Boolean(
+    updatedTimes.pm_time_in || updatedTimes.pm_time_out,
+  );
+  const hasOtPunch = Boolean(
+    updatedTimes.ot_time_in || updatedTimes.ot_time_out,
+  );
+
+  if (hasPmPunch && !amComplete) {
+    warnings.push(
+      "This record has an afternoon (PM) punch, but the morning (AM) shift isn't complete for this day.",
+    );
+  }
+  if (hasOtPunch && !(amComplete && pmComplete)) {
+    warnings.push(
+      "This record has an overtime (OT) punch, but the AM/PM shift isn't complete for this day.",
+    );
+  }
+  return warnings;
+}
+
+function requireValidTimeOrder(updatedTimes) {
+  const pairs = [
+    ["am_time_in", "am_time_out", "morning"],
+    ["pm_time_in", "pm_time_out", "afternoon"],
+    ["ot_time_in", "ot_time_out", "overtime"],
+  ];
+  for (const [inKey, outKey, label] of pairs) {
+    const inTime = updatedTimes[inKey];
+    const outTime = updatedTimes[outKey];
+    if (
+      inTime &&
+      outTime &&
+      new Date(outTime).getTime() <= new Date(inTime).getTime()
+    ) {
+      throw new AttendanceError(
+        `The ${label} time out must be after the ${label} time in.`,
+        400,
+      );
+    }
+  }
+}
+
 async function correctAttendanceLog({
   studentId,
   dateStr,
@@ -381,6 +456,9 @@ async function correctAttendanceLog({
       "otOut" in times ? manilaTimeToDate(dateStr, times.otOut) : log.ot_time_out,
   };
 
+  requireValidTimeOrder(updatedTimes);
+  const warnings = buildConsistencyWarnings(updatedTimes);
+
   const totalHours = computeTotalHours(updatedTimes);
   const combinedRemarks = log.remarks
     ? `${log.remarks}\n[Correction] ${remarks.trim()}`
@@ -408,7 +486,7 @@ async function correctAttendanceLog({
 
   await syncOjtStatus(studentId);
 
-  return rows[0];
+  return { ...rows[0], warnings };
 }
 
 module.exports = {

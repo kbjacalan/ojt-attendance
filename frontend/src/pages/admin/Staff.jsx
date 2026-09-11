@@ -219,11 +219,12 @@ export default function Staff() {
  */
 function StaffForm({ staffMember, agencies, onClose, onCreated }) {
   const isEditing = Boolean(staffMember);
+  const initialAgencyId = staffMember?.agency_id || "";
   const [form, setForm] = useState({
     fullName: staffMember?.full_name || "",
     email: staffMember?.email || "",
     password: "",
-    agencyId: staffMember?.agency_id || "",
+    agencyId: initialAgencyId,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -235,11 +236,14 @@ function StaffForm({ staffMember, agencies, onClose, onCreated }) {
 
     try {
       if (isEditing) {
-        await updateStaffAccount(staffMember.id, {
+        const payload = {
           fullName: form.fullName,
           email: form.email,
-          agencyId: form.agencyId || null,
-        });
+        };
+        if (form.agencyId !== initialAgencyId) {
+          payload.agencyId = form.agencyId || null;
+        }
+        await updateStaffAccount(staffMember.id, payload);
       } else {
         await createUser({
           email: form.email,
@@ -300,7 +304,9 @@ function StaffForm({ staffMember, agencies, onClose, onCreated }) {
       {isEditing && (
         <p className="text-xs text-slate-400">
           Password changes aren't supported here yet — the account holder would
-          need a separate reset flow.
+          need a separate reset flow. If this in-charge supervises more than
+          one agency, only their first assignment is shown above; changing it
+          here only applies if you actually pick a different agency.
         </p>
       )}
 

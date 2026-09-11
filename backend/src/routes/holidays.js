@@ -38,6 +38,12 @@ router.post("/", async (req, res) => {
 });
 
 router.put("/:id", async (req, res) => {
+  const { holidayDate } = req.body;
+  if (holidayDate !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(holidayDate)) {
+    return res
+      .status(400)
+      .json({ error: "holidayDate must be in YYYY-MM-DD format." });
+  }
   try {
     const holiday = await updateHoliday(req.params.id, req.body);
     res.json(holiday);
