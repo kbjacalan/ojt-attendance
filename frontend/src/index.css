@@ -29,3 +29,14 @@ button {
 .gps-pulse-ring {
   animation: gps-pulse 2s cubic-bezier(0.2, 0.6, 0.4, 1) infinite;
 }
+
+:root {
+  --attendance-sheet-overlap: 1.5rem;
+  --attendance-control-clearance: calc(
+    var(--attendance-sheet-overlap) + 1.25rem
+  );
+}
+
+.attendance-map .leaflet-bottom.leaflet-right {
+  margin-bottom: var(--attendance-control-clearance);
+}

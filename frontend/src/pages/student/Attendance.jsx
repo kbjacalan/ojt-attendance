@@ -196,8 +196,7 @@ export default function Attendance() {
         </div>
       </div>
 
-      {/* Scrolling content sheet, overlapping the map's bottom edge */}
-      <div className="relative z-10 -mt-6 rounded-t-3xl bg-slate-50 shadow-[0_-8px_24px_-6px_rgba(0,0,0,0.08)]">
+      <div className="relative z-10 mt-[calc(var(--attendance-sheet-overlap)*-1)] rounded-t-3xl bg-slate-50 shadow-[0_-8px_24px_-6px_rgba(0,0,0,0.08)]">
         <div className="w-full max-w-md mx-auto px-4 pt-6 pb-10 space-y-4">
           {/* Drag handle affordance, purely visual */}
           <div className="flex justify-center">

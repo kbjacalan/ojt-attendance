@@ -175,14 +175,13 @@ export default function AttendanceMap({
       : null;
 
   return (
-    <div className="relative w-full h-full">
+    <div className="attendance-map relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
 
-      {/* Recenter button */}
       {!agencyLoading && !agencyError && (
         <button
           onClick={recenter}
-          className="absolute bottom-4 left-4 z-[1000] bg-white rounded-full shadow-md p-2.5 text-caap-navy hover:bg-slate-50 active:scale-95 transition-transform"
+          className="absolute bottom-[var(--attendance-control-clearance)] left-4 z-[1000] bg-white rounded-full shadow-md p-2.5 text-caap-navy hover:bg-slate-50 active:scale-95 transition-transform"
           aria-label="Recenter map on my location"
         >
           <LocateFixed className="w-5 h-5" />
