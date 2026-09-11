@@ -14,14 +14,7 @@ import { useGeolocation } from "../../hooks/useGeolocation";
 import { timeIn, timeOut } from "../../services/api";
 import GeolocationStatus from "./GeolocationStatus";
 import ConfirmModal from "../common/ConfirmModal";
-import {
-  isPeriodWindowClosed,
-  isPeriodWindowOpen,
-  getMissedPeriods,
-  getMinutesUntilPeriodClose,
-  hasCompleteSchedule,
-  GRACE_MINUTES,
-} from "../../utils/dutyStatusFromDay";
+import { hasCompleteSchedule } from "../../utils/dutyStatusFromDay";
 
 const PERIOD_OPTIONS = [
   {
@@ -68,8 +61,6 @@ function getPeriodOptions(schedule) {
     : PERIOD_OPTIONS;
 }
 
-const CLOSING_SOON_THRESHOLD_MINUTES = 45;
-
 function to12Hour(time24) {
   if (!time24) return "";
   const [hStr, mStr] = time24.split(":");
@@ -91,26 +82,6 @@ function suggestPeriod() {
   return hour < 12 ? "morning" : "afternoon";
 }
 
-function subtractMinutes(time24, minutes) {
-  if (!time24) return time24;
-  const [hStr, mStr] = time24.split(":");
-  const total = parseInt(hStr, 10) * 60 + parseInt(mStr, 10) - minutes;
-  const clamped = ((total % 1440) + 1440) % 1440;
-  const h = Math.floor(clamped / 60);
-  const m = clamped % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function periodOpenTime(period, schedule, periodOptions) {
-  const opt = periodOptions.find((o) => o.value === period);
-  return subtractMinutes(schedule?.[opt.startKey], GRACE_MINUTES);
-}
-
-function periodCloseTime(period, schedule, periodOptions) {
-  const opt = periodOptions.find((o) => o.value === period);
-  return subtractMinutes(schedule?.[opt.endKey], -GRACE_MINUTES);
-}
-
 function resolveSuggestion(todayDay, schedule) {
   const clockPeriod = suggestPeriod();
   const order =
@@ -120,57 +91,16 @@ function resolveSuggestion(todayDay, schedule) {
   if (hasApprovedOvertimeToday(schedule)) order.push("overtime");
 
   const periodOptions = getPeriodOptions(schedule);
-  let waitingPeriod = null;
 
   for (const value of order) {
     const opt = periodOptions.find((o) => o.value === value);
     const inTime = todayDay?.[opt.inKey] || "";
     const outTime = todayDay?.[opt.outKey] || "";
-    if (isPeriodWindowClosed(value, schedule)) continue;
-    if (!isPeriodWindowOpen(value, schedule)) {
-      if (!inTime && !waitingPeriod) waitingPeriod = value;
-      continue;
-    }
-    if (!inTime) return { period: value, action: "in", waitingPeriod: null };
-    if (!outTime) return { period: value, action: "out", waitingPeriod: null };
+    if (!inTime) return { period: value, action: "in" };
+    if (!outTime) return { period: value, action: "out" };
   }
 
-  return { period: clockPeriod, action: null, waitingPeriod };
-}
-
-function missedPeriodMessage({ period, type }, periodOptions) {
-  const name = periodOptions.find((o) => o.value === period).name;
-  return type === "in"
-    ? `${name} shift: no time-in was recorded before the window closed.`
-    : `${name} shift: you timed in, but the time-out window closed before you punched out.`;
-}
-
-function MissedPunchNotice({ missedPeriods, periodOptions }) {
-  if (missedPeriods.length === 0) return null;
-
-  return (
-    <div className="flex items-start gap-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3.5 mb-3">
-      <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
-      <div className="text-sm">
-        <p className="font-medium">
-          {missedPeriods.length > 1
-            ? "You missed a couple of punches today."
-            : "You missed a punch today."}
-        </p>
-        <ul className="mt-1 space-y-0.5 text-red-600/90 text-[13px] list-disc list-inside">
-          {missedPeriods.map((m) => (
-            <li key={`${m.period}-${m.type}`}>
-              {missedPeriodMessage(m, periodOptions)}
-            </li>
-          ))}
-        </ul>
-        <p className="mt-1.5 text-[13px] text-red-600/90">
-          This can only be fixed by your agency in-charge or the OJT admin,
-          please let them know so they can correct it for you.
-        </p>
-      </div>
-    </div>
-  );
+  return { period: clockPeriod, action: null };
 }
 
 function FirstTimeNotice({ agencyName }) {
@@ -200,12 +130,10 @@ function ScheduleIncompleteNotice() {
   );
 }
 
-function derivePeriodStatus(opt, todayDay, missedPeriods) {
+function derivePeriodStatus(opt, todayDay) {
   const inTime = todayDay?.[opt.inKey] || "";
   const outTime = todayDay?.[opt.outKey] || "";
-  const missed = missedPeriods.find((m) => m.period === opt.value);
 
-  if (missed) return { state: "missed", inTime, outTime };
   if (inTime && outTime) return { state: "done", inTime, outTime };
   if (inTime && !outTime) return { state: "active", inTime, outTime };
   return { state: "pending", inTime, outTime };
@@ -220,10 +148,6 @@ const STATUS_STYLES = {
     icon: Clock,
     className: "bg-blue-50 border-blue-200 text-blue-700",
   },
-  missed: {
-    icon: ShieldAlert,
-    className: "bg-red-50 border-red-200 text-red-700",
-  },
   pending: {
     icon: Circle,
     className: "bg-slate-50 border-slate-200 text-slate-400",
@@ -233,16 +157,15 @@ const STATUS_STYLES = {
 function periodStatusLabel({ state, inTime, outTime }) {
   if (state === "done") return `${to12Hour(inTime)}–${to12Hour(outTime)}`;
   if (state === "active") return `Since ${to12Hour(inTime)}`;
-  if (state === "missed") return "Missed";
   return "Not yet";
 }
 
-function TodayShiftsStrip({ todayDay, missedPeriods, periodOptions }) {
+function TodayShiftsStrip({ todayDay, periodOptions }) {
   const hasThree = periodOptions.length === 3;
   return (
     <div className="grid grid-cols-2 gap-2 mb-4">
       {periodOptions.map((opt, i) => {
-        const status = derivePeriodStatus(opt, todayDay, missedPeriods);
+        const status = derivePeriodStatus(opt, todayDay);
         const { icon: Icon, className } = STATUS_STYLES[status.state];
         // AM/PM sit side by side; with a third period (OT) it spans
         // the full width below them, at every screen size.
@@ -270,25 +193,6 @@ function TodayShiftsStrip({ todayDay, missedPeriods, periodOptions }) {
   );
 }
 
-function ClosingSoonWarning({ suggestion, schedule, periodOptions }) {
-  if (suggestion.action !== "out") return null;
-  const opt = periodOptions.find((o) => o.value === suggestion.period);
-  const minutesLeft = getMinutesUntilPeriodClose(suggestion.period, schedule);
-  if (minutesLeft == null || minutesLeft > CLOSING_SOON_THRESHOLD_MINUTES) {
-    return null;
-  }
-  const verb = "time out";
-  return (
-    <div className="flex items-start gap-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 text-sm mb-3">
-      <Clock className="w-4 h-4 shrink-0 mt-0.5" />
-      <span>
-        The {opt.name} window closes in about {minutesLeft} minute
-        {minutesLeft === 1 ? "" : "s"}. Don't forget to {verb}.
-      </span>
-    </div>
-  );
-}
-
 export default function TimeInOutButton({
   studentId,
   todayDay,
@@ -309,9 +213,6 @@ export default function TimeInOutButton({
   const scheduleComplete = isUnassigned || hasCompleteSchedule(schedule);
   const periodOptions = getPeriodOptions(schedule);
   const suggestion = resolveSuggestion(todayDay, schedule);
-  const actualMissedPeriods = getMissedPeriods(todayDay, schedule);
-  const suppressMissed = isUnassigned || hasNeverPunched || !scheduleComplete;
-  const missedPeriods = suppressMissed ? [] : actualMissedPeriods;
   const isLocked =
     submitting !== null || Boolean(disabledReason) || !scheduleComplete;
 
@@ -378,11 +279,7 @@ export default function TimeInOutButton({
         You must be within your agency premises to time in or out.
       </p>
 
-      <TodayShiftsStrip
-        todayDay={todayDay}
-        missedPeriods={missedPeriods}
-        periodOptions={periodOptions}
-      />
+      <TodayShiftsStrip todayDay={todayDay} periodOptions={periodOptions} />
 
       {disabledReason && (
         <div className="mb-4 flex items-start gap-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 text-sm">
@@ -396,19 +293,10 @@ export default function TimeInOutButton({
         <FirstTimeNotice agencyName={agencyName} />
       )}
 
-      <MissedPunchNotice missedPeriods={missedPeriods} periodOptions={periodOptions} />
-      <ClosingSoonWarning
-        suggestion={suggestion}
-        schedule={schedule}
-        periodOptions={periodOptions}
-      />
-
       <SuggestedAction
         suggestion={suggestion}
         todayDay={todayDay}
-        schedule={schedule}
         periodOptions={periodOptions}
-        hasMissedToday={actualMissedPeriods.length > 0}
         isLocked={isLocked}
         submitting={submitting}
         onPunch={(type) => setPendingPunch(type)}
@@ -442,31 +330,12 @@ export default function TimeInOutButton({
 function SuggestedAction({
   suggestion,
   todayDay,
-  schedule,
   periodOptions,
-  hasMissedToday,
   isLocked,
   submitting,
   onPunch,
 }) {
   if (!suggestion.action) {
-    if (hasMissedToday) return null;
-
-    if (suggestion.waitingPeriod) {
-      const opt = periodOptions.find((o) => o.value === suggestion.waitingPeriod);
-      const startTime = periodOpenTime(suggestion.waitingPeriod, schedule, periodOptions);
-      const closeTime = periodCloseTime(suggestion.waitingPeriod, schedule, periodOptions);
-      return (
-        <div className="flex items-center gap-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 px-4 py-3.5 mb-1 text-sm">
-          <Clock className="w-5 h-5 shrink-0" />
-          <span>
-            Your {opt.name} shift opens at {to12Hour(startTime)} and closes at{" "}
-            {to12Hour(closeTime)}. Come back then to time in.
-          </span>
-        </div>
-      );
-    }
-
     return (
       <div className="flex items-center gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3.5 mb-1 text-sm font-medium">
         <CheckCircle2 className="w-5 h-5 shrink-0" />

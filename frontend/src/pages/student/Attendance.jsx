@@ -135,12 +135,8 @@ export default function Attendance() {
 
   // True until the student's very first recorded punch (this month —
   // the DTR endpoint is month-scoped, so this is a reasonable proxy for
-  // "hasn't started yet" without a dedicated backend flag). Missed-punch
-  // detection is time-of-day only (see getMissedPeriods) and can't tell
-  // "genuinely missed" apart from "was just assigned and hasn't had
-  // their first shift yet", so a newly-assigned student who hasn't
-  // timed in even once shouldn't be told they missed a punch the
-  // moment today's AM/PM window closes.
+  // "hasn't started yet" without a dedicated backend flag). Used to show
+  // a first-time welcome notice instead of the usual attendance summary.
   const hasNeverPunched = !dtr?.days?.some(
     (d) => d.amIn || d.amOut || d.pmIn || d.pmOut || d.otIn || d.otOut,
   );

@@ -1,19 +1,8 @@
 const pool = require("../config/db");
 const { isWithinGeofence } = require("../utils/geo");
-const {
-  getManilaDateString,
-  hoursBetween,
-  isPeriodWindowOpen,
-  isPeriodWindowClosed,
-} = require("../utils/time");
+const { getManilaDateString, hoursBetween } = require("../utils/time");
 const { syncOjtStatus } = require("./userService");
 const { getTodayRequest } = require("./otRequestService");
-
-const PERIOD_LABEL = {
-  morning: "morning (AM)",
-  afternoon: "afternoon (PM)",
-  overtime: "overtime (OT)",
-};
 
 const SELECTABLE_PERIODS = ["morning", "afternoon", "overtime"];
 
@@ -90,10 +79,8 @@ function requireCompleteSchedule(agency) {
 }
 
 /**
- * Overtime has no fixed daily schedule — its "window" is whatever the
- * student's in-charge approved for today via an ot_requests row. This
- * builds the same { otStart, otEnd } shape isPeriodWindowOpen/Closed
- * already expects (see PERIOD_BOUNDS.overtime in utils/time.js).
+ * Overtime has no fixed daily schedule — it requires an approved
+ * ot_requests row for today before a student can time in or out.
  */
 async function requireApprovedOvertimeWindow(studentId) {
   const request = await getTodayRequest(studentId);
@@ -154,7 +141,7 @@ async function timeIn({ studentId, latitude, longitude, period }) {
   }
 
   const agency = await getStudentAgency(studentId);
-  const schedule = await resolveScheduleForPeriod(period, agency, studentId);
+  await resolveScheduleForPeriod(period, agency, studentId);
 
   const { withinRadius, distanceMeters } = isWithinGeofence(
     latitude,
@@ -178,22 +165,6 @@ async function timeIn({ studentId, latitude, longitude, period }) {
     throw new AttendanceError(
       `You have already timed in for the ${period} period today.`,
       409,
-    );
-  }
-
-  if (!isPeriodWindowOpen(period, schedule)) {
-    throw new AttendanceError(
-      `It's not yet time to time in for the ${PERIOD_LABEL[period]} period.`,
-      409,
-      "PERIOD_NOT_OPEN",
-    );
-  }
-
-  if (isPeriodWindowClosed(period, schedule)) {
-    throw new AttendanceError(
-      `You missed the time-in window for the ${PERIOD_LABEL[period]} period. Please see your agency in-charge or the OJT admin to have today's attendance corrected.`,
-      409,
-      "PERIOD_MISSED",
     );
   }
 
@@ -231,7 +202,7 @@ async function timeOut({ studentId, latitude, longitude, period }) {
   }
 
   const agency = await getStudentAgency(studentId);
-  const schedule = await resolveScheduleForPeriod(period, agency, studentId);
+  await resolveScheduleForPeriod(period, agency, studentId);
 
   const { withinRadius, distanceMeters } = isWithinGeofence(
     latitude,
@@ -261,14 +232,6 @@ async function timeOut({ studentId, latitude, longitude, period }) {
     throw new AttendanceError(
       `You have already timed out for the ${period} period today.`,
       409,
-    );
-  }
-
-  if (isPeriodWindowClosed(period, schedule)) {
-    throw new AttendanceError(
-      `You missed the time-out window for the ${PERIOD_LABEL[period]} period. Please see your agency in-charge or the OJT admin to have today's attendance corrected.`,
-      409,
-      "PERIOD_MISSED",
     );
   }
 

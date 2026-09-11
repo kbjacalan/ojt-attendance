@@ -174,7 +174,7 @@ export default function StudentDTRReview() {
                   {dtr.student.name}
                 </span>
                 <span className="shrink-0 ml-3">Course:</span>
-                <span className="border-b border-slate-800 w-40 px-1">
+                <span className="border-b border-slate-800 w-56 px-1">
                   {dtr.student.course}
                 </span>
               </div>
@@ -190,7 +190,7 @@ export default function StudentDTRReview() {
                   {dtr.student.month}
                 </span>
                 <span className="shrink-0 ml-2">Official Hours:</span>
-                <span className="border-b border-slate-800 flex-1 px-1 whitespace-nowrap overflow-hidden text-ellipsis">
+                <span className="border-b border-slate-800 flex-1 px-1">
                   {dtr.student.officialHours || "—"}
                 </span>
               </div>
