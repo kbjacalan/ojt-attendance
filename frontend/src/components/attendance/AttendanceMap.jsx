@@ -53,6 +53,8 @@ export default function AttendanceMap({
   agencyLoading,
   agencyError,
   locationError,
+  greetingLine,
+  dateTimeLine,
 }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
@@ -206,39 +208,50 @@ export default function AttendanceMap({
         </div>
       )}
 
-      {/* Geofence status pill */}
-      {!agencyLoading && !agencyError && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] w-[calc(100%-2rem)] max-w-sm">
-          {geofence ? (
-            <div
-              className={`flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border ${
-                geofence.withinRadius
-                  ? "bg-emerald-50/95 text-emerald-700 border-emerald-200"
-                  : "bg-amber-50/95 text-amber-700 border-amber-200"
-              }`}
-            >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  geofence.withinRadius ? "bg-emerald-500" : "bg-amber-500"
-                }`}
-              />
-              {geofence.withinRadius
-                ? "You're inside the geofence"
-                : `${geofence.distanceMeters}m away, move closer to time in/out`}
-            </div>
-          ) : locationError ? (
-            <div className="flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border bg-red-50/95 text-red-700 border-red-200">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              {locationError}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border bg-white/95 text-slate-500 border-slate-200">
-              <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
-              Finding your location…
-            </div>
-          )}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[900]">
+        <div className="bg-gradient-to-b from-black/55 to-transparent pt-4">
+          <div className="max-w-md mx-auto px-4 text-white">
+            <h1 className="text-lg font-bold drop-shadow-sm">{greetingLine}</h1>
+            <p className="text-xs text-white/80 mt-0.5">{dateTimeLine}</p>
+          </div>
         </div>
-      )}
+
+        {/* Geofence status pill */}
+        {!agencyLoading && !agencyError && (
+          <div className="px-4 pt-4">
+            <div className="mx-auto w-full max-w-sm">
+              {geofence ? (
+                <div
+                  className={`flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border ${
+                    geofence.withinRadius
+                      ? "bg-emerald-50/95 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50/95 text-amber-700 border-amber-200"
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      geofence.withinRadius ? "bg-emerald-500" : "bg-amber-500"
+                    }`}
+                  />
+                  {geofence.withinRadius
+                    ? "You're inside the geofence"
+                    : `${geofence.distanceMeters}m away, move closer to time in/out`}
+                </div>
+              ) : locationError ? (
+                <div className="flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border bg-red-50/95 text-red-700 border-red-200">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  {locationError}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border bg-white/95 text-slate-500 border-slate-200">
+                  <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
+                  Finding your location…
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

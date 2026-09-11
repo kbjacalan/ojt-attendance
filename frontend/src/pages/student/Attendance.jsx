@@ -180,22 +180,14 @@ export default function Attendance() {
           agencyLoading={agencyLoading}
           agencyError={agencyError}
           locationError={locationError}
+          greetingLine={`${greetingFor(now)}, ${firstName}`}
+          dateTimeLine={`${PH_DATE_FORMATTER.format(now)} \u00b7 ${PH_TIME_FORMATTER.format(now)}`}
         />
-
-        {/* Greeting/clock overlay, scrim for legibility over the tiles */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent">
-          <div className="max-w-md mx-auto px-4 pt-4 text-white">
-            <h1 className="text-lg font-bold drop-shadow-sm">
-              {greetingFor(now)}, {firstName}
-            </h1>
-            <p className="text-xs text-white/80 mt-0.5">
-              {PH_DATE_FORMATTER.format(now)} &middot;{" "}
-              {PH_TIME_FORMATTER.format(now)}
-            </p>
-          </div>
-        </div>
       </div>
 
+      {/* Scrolling content sheet, overlapping the map's bottom edge by
+          --attendance-sheet-overlap (see index.css — the map's
+          floating controls key their clearance off the same variable) */}
       <div className="relative z-10 mt-[calc(var(--attendance-sheet-overlap)*-1)] rounded-t-3xl bg-slate-50 shadow-[0_-8px_24px_-6px_rgba(0,0,0,0.08)]">
         <div className="w-full max-w-md mx-auto px-4 pt-6 pb-10 space-y-4">
           {/* Drag handle affordance, purely visual */}
