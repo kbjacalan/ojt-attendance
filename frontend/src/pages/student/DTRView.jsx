@@ -10,6 +10,7 @@ import { Link } from "react-router-dom";
 import { getMyDTR } from "../../services/dtrApi";
 import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
+import bagongPilipinasLogo from "../../assets/bagong_pilipinas_logo.png";
 import { getManilaMonthString } from "../../utils/manilaDate";
 
 /** Converts "HH:MM" 24-hour string to "h:mm" without AM/PM (for Morning/Afternoon columns). */
@@ -127,18 +128,26 @@ export default function DTRView() {
         <ResponsiveDocument className="max-w-3xl mx-auto">
           <div className="bg-white shadow-sm border border-slate-200 rounded-lg p-8 print:p-0 print:shadow-none print:border-none">
             {/* Header */}
-            <div className="flex items-center gap-4 mb-2">
-              <img
-                src={caapLogo}
-                alt="CAAP Logo"
-                className="w-16 h-16 object-contain shrink-0"
-              />
-              <div className="flex-1">
-                <p className="text-xs italic">Republic of the Philippines</p>
-                <p className="text-base font-bold">
-                  Civil Aviation Authority of the Philippines
-                </p>
+            <div className="flex flex-col items-center mb-2">
+              <div className="flex items-center justify-center gap-3">
+                <img
+                  src={bagongPilipinasLogo}
+                  alt="Bagong Pilipinas Logo"
+                  className="w-16 h-16 object-contain shrink-0"
+                />
+                <img
+                  src={caapLogo}
+                  alt="CAAP Logo"
+                  className="w-16 h-16 object-contain shrink-0"
+                />
               </div>
+              <p className="text-xs text-black mt-1">
+                Republic of the Philippines
+              </p>
+              <p className="text-xs text-black">Department of Transportation</p>
+              <p className="text-base font-bold text-black uppercase tracking-wide text-center">
+                Civil Aviation Authority of the Philippines
+              </p>
             </div>
 
             <h1 className="text-center font-bold tracking-widest text-base my-4">
