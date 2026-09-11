@@ -152,7 +152,7 @@ export default function DTRView() {
                   {dtr.student.name}
                 </span>
                 <span className="shrink-0 ml-3">Course:</span>
-                <span className="border-b border-slate-800 w-56 px-1">
+                <span className="border-b border-slate-800 w-fit max-w-[75ch] px-1">
                   {dtr.student.course}
                 </span>
               </div>
@@ -164,7 +164,7 @@ export default function DTRView() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="shrink-0">Month:</span>
-                <span className="border-b border-slate-800 w-24 px-1 shrink-0">
+                <span className="border-b border-slate-800 w-[15ch] px-1 shrink-0">
                   {dtr.student.month}
                 </span>
                 <span className="shrink-0 ml-2">Official Hours:</span>
