@@ -132,6 +132,21 @@ async function getMyAgencyGeofence(studentId) {
   };
 }
 
+function requirePriorPeriodsComplete(period, log) {
+  const index = SELECTABLE_PERIODS.indexOf(period);
+  for (let i = 0; i < index; i++) {
+    const priorPeriod = SELECTABLE_PERIODS[i];
+    const priorCols = PERIOD_COLUMNS[priorPeriod];
+    if (!log[priorCols.in] || !log[priorCols.out]) {
+      throw new AttendanceError(
+        `Please complete your ${priorPeriod} shift (time in and time out) before starting the ${period} shift.`,
+        409,
+        "PRIOR_PERIOD_INCOMPLETE",
+      );
+    }
+  }
+}
+
 async function timeIn({ studentId, latitude, longitude, period }) {
   if (!SELECTABLE_PERIODS.includes(period)) {
     throw new AttendanceError(
@@ -167,6 +182,8 @@ async function timeIn({ studentId, latitude, longitude, period }) {
       409,
     );
   }
+
+  requirePriorPeriodsComplete(period, log);
 
   const now = new Date();
   const setClauses = [`${cols.in} = $1`];

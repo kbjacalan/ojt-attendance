@@ -19,11 +19,13 @@ export function computeDutyStatusFromDay(day) {
   ];
 
   let hasOpenSession = false;
-  let hasAnyCompleted = false;
+  let hasAnyPunch = false;
   for (const [inKey, outKey] of openSessions) {
     if (day[inKey] && !day[outKey]) hasOpenSession = true;
-    if (day[inKey] && day[outKey]) hasAnyCompleted = true;
+    if (day[inKey]) hasAnyPunch = true;
   }
+
+  const afternoonComplete = Boolean(day.pmIn && day.pmOut);
 
   let lastPunchLabel = null;
   let lastPunchTime = null;
@@ -36,7 +38,8 @@ export function computeDutyStatusFromDay(day) {
 
   let status;
   if (hasOpenSession) status = "open_session";
-  else if (hasAnyCompleted) status = "completed";
+  else if (afternoonComplete) status = "completed";
+  else if (hasAnyPunch) status = "partial";
   else status = "no_record";
 
   return { status, lastPunchLabel, lastPunchTime };

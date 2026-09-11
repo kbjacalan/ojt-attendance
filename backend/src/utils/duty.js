@@ -9,7 +9,16 @@
  *   'open_session'  — has a time-in with no matching time-out yet.
  *                      Today: means "currently on duty".
  *                      Past date: means a missed/forgotten time-out.
- *   'completed'     — at least one full in/out pair, no open session.
+ *   'completed'     — the afternoon (PM) shift has both a time-in and
+ *                      time-out logged, and there's no open session.
+ *                      This is the last mandatory shift of the day, so
+ *                      the day only counts as done once it's closed out
+ *                      — finishing AM alone (e.g. on a lunch break) is
+ *                      not enough to be "completed".
+ *   'partial'       — at least one punch recorded (e.g. AM finished),
+ *                      but the afternoon shift isn't done yet and
+ *                      there's no open session right now (on a break
+ *                      between shifts).
  *   'no_record'     — no attendance row at all for that day.
  *                      Today: "not yet arrived". Past date: "absent".
  */
@@ -34,11 +43,13 @@ function computeDutyStatus(log) {
   ];
 
   let hasOpenSession = false;
-  let hasAnyCompleted = false;
+  let hasAnyPunch = false;
   for (const [inCol, outCol] of openSessions) {
     if (log[inCol] && !log[outCol]) hasOpenSession = true;
-    if (log[inCol] && log[outCol]) hasAnyCompleted = true;
+    if (log[inCol]) hasAnyPunch = true;
   }
+
+  const afternoonComplete = Boolean(log.pm_time_in && log.pm_time_out);
 
   // Find the most recent non-null punch, for the "last seen" label
   let lastPunchLabel = null;
@@ -59,7 +70,8 @@ function computeDutyStatus(log) {
 
   let status;
   if (hasOpenSession) status = "open_session";
-  else if (hasAnyCompleted) status = "completed";
+  else if (afternoonComplete) status = "completed";
+  else if (hasAnyPunch) status = "partial";
   else status = "no_record";
 
   return { status, lastPunchLabel, lastPunchTime };

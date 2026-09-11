@@ -2,6 +2,7 @@ import {
   CircleDot,
   CheckCircle2,
   Clock,
+  Coffee,
   AlertTriangle,
   XCircle,
 } from "lucide-react";
@@ -20,12 +21,15 @@ function to12Hour(time24) {
 /**
  * Shows a student's attendance status for a given date, computed
  * server-side by utils/duty.js. The same underlying status
- * ('open_session' | 'completed' | 'no_record') is labeled differently
- * depending on whether the date is today or in the past:
+ * ('open_session' | 'completed' | 'partial' | 'no_record') is labeled
+ * differently depending on whether the date is today or in the past:
  *
  *   open_session + today      -> "On Duty" (green, currently there)
  *   open_session + past date  -> "Missing Time-Out" (red, likely an error)
- *   completed    + either     -> "Completed" (gray/neutral)
+ *   completed    + either     -> "Completed" (gray/neutral) — afternoon
+ *                                 shift has both a time-in and time-out
+ *   partial      + today      -> "On Break" (amber, AM done, PM pending)
+ *   partial      + past date  -> "Incomplete" (red, PM was never closed out)
  *   no_record    + today      -> "Not Yet Arrived" (amber)
  *   no_record    + past date  -> "Absent" (red)
  */
@@ -79,6 +83,19 @@ function getConfig(status, isToday) {
       label: "Completed",
       classes: "bg-slate-100 text-slate-600 border-slate-200",
     };
+  }
+  if (status === "partial") {
+    return isToday
+      ? {
+          icon: Coffee,
+          label: "On Break",
+          classes: "bg-amber-50 text-amber-700 border-amber-200",
+        }
+      : {
+          icon: AlertTriangle,
+          label: "Incomplete",
+          classes: "bg-red-50 text-red-700 border-red-200",
+        };
   }
   // no_record
   return isToday

@@ -70,24 +70,8 @@ function to12Hour(time24) {
   return `${h}:${mStr} ${period}`;
 }
 
-function suggestPeriod() {
-  const hour = parseInt(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Manila",
-      hour: "numeric",
-      hour12: false,
-    }).format(new Date()),
-    10,
-  );
-  return hour < 12 ? "morning" : "afternoon";
-}
-
 function resolveSuggestion(todayDay, schedule) {
-  const clockPeriod = suggestPeriod();
-  const order =
-    clockPeriod === "morning"
-      ? ["morning", "afternoon"]
-      : ["afternoon", "morning"];
+  const order = ["morning", "afternoon"];
   if (hasApprovedOvertimeToday(schedule)) order.push("overtime");
 
   const periodOptions = getPeriodOptions(schedule);
@@ -100,7 +84,7 @@ function resolveSuggestion(todayDay, schedule) {
     if (!outTime) return { period: value, action: "out" };
   }
 
-  return { period: clockPeriod, action: null };
+  return { period: order[order.length - 1], action: null };
 }
 
 function FirstTimeNotice({ agencyName }) {
