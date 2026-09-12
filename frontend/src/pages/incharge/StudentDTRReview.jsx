@@ -505,7 +505,7 @@ function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
         <td className={cellClass}></td>
         <td className={cellClass}></td>
         <td className={cellClass}></td>
-        <td className={`${cellClass} text-red-600 font-medium`}>0.00</td>
+        <td className={cellClass}></td>
         <td className={cellClass}></td>
       </tr>
     );
@@ -527,6 +527,9 @@ function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
     );
   }
 
+  // present — highlight empty time cells red on screen only (incomplete day cue)
+  const missingCell = "bg-red-100 print:bg-transparent";
+  const otIncomplete = Boolean(row.otIn) !== Boolean(row.otOut);
   return (
     <tr
       className={`${row.isHolidayWorked ? "bg-amber-50" : ""} ${clickable}`}
@@ -536,7 +539,7 @@ function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
         {row.day}
         {row.isHolidayWorked && (
           <span
-            className="block text-[8px] text-amber-600 font-medium leading-none mt-0.5"
+            className="block text-[8px] text-amber-600 font-medium leading-none mt-0.5 print:hidden"
             title={row.holidayName}
           >
             HOLIDAY
@@ -555,12 +558,28 @@ function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
           </button>
         )}
       </td>
-      <td className={cellClass}>{to12HourNoSuffix(row.amIn)}</td>
-      <td className={cellClass}>{to12HourNoSuffix(row.amOut)}</td>
-      <td className={cellClass}>{to12HourNoSuffix(row.pmIn)}</td>
-      <td className={cellClass}>{to12HourNoSuffix(row.pmOut)}</td>
-      <td className={cellClass}>{to12Hour(row.otIn)}</td>
-      <td className={cellClass}>{to12Hour(row.otOut)}</td>
+      <td className={`${cellClass} ${!row.amIn ? missingCell : ""}`}>
+        {to12HourNoSuffix(row.amIn)}
+      </td>
+      <td className={`${cellClass} ${!row.amOut ? missingCell : ""}`}>
+        {to12HourNoSuffix(row.amOut)}
+      </td>
+      <td className={`${cellClass} ${!row.pmIn ? missingCell : ""}`}>
+        {to12HourNoSuffix(row.pmIn)}
+      </td>
+      <td className={`${cellClass} ${!row.pmOut ? missingCell : ""}`}>
+        {to12HourNoSuffix(row.pmOut)}
+      </td>
+      <td
+        className={`${cellClass} ${otIncomplete && !row.otIn ? missingCell : ""}`}
+      >
+        {to12Hour(row.otIn)}
+      </td>
+      <td
+        className={`${cellClass} ${otIncomplete && !row.otOut ? missingCell : ""}`}
+      >
+        {to12Hour(row.otOut)}
+      </td>
       <td className={`${cellClass} font-medium`}>
         {row.totalHours.toFixed(2)}
       </td>
