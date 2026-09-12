@@ -341,7 +341,7 @@ function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
         <td colSpan={6} className={`${cellClass} text-slate-400 italic`}>
           — Weekend —
         </td>
-        <td className={cellClass}>0.00</td>
+        <td className={cellClass}></td>
         <td className={cellClass}></td>
       </tr>
     );
@@ -357,7 +357,7 @@ function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
         <td colSpan={6} className={`${cellClass} italic`}>
           {row.label || "Holiday"}
         </td>
-        <td className={cellClass}>0.00</td>
+        <td className={cellClass}></td>
         <td className={cellClass}></td>
       </tr>
     );
@@ -449,7 +449,7 @@ function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
         {to12Hour(row.otOut)}
       </td>
       <td className={`${cellClass} font-medium`}>
-        {row.totalHours.toFixed(2)}
+        {row.totalHours ? row.totalHours.toFixed(2) : ""}
       </td>
       <td className={cellClass}>
         {row.certifiedBy && signature ? (
