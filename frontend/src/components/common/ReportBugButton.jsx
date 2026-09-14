@@ -11,10 +11,13 @@ export default function ReportBugButton() {
   const { user } = useAuth();
   const { pathname } = useLocation();
   const [expanded, setExpanded] = useState(false);
+  const [canHover] = useState(
+    () => window.matchMedia("(hover: hover)").matches,
+  );
   const isVisiblePath = VISIBLE_PATHS.includes(pathname);
 
   useEffect(() => {
-    if (!user || !isVisiblePath) return;
+    if (!user || !isVisiblePath || !canHover) return;
 
     const expandTimer = setTimeout(() => setExpanded(true), 0);
     const collapseTimer = setTimeout(
@@ -26,7 +29,7 @@ export default function ReportBugButton() {
       clearTimeout(expandTimer);
       clearTimeout(collapseTimer);
     };
-  }, [user, isVisiblePath]);
+  }, [user, isVisiblePath, canHover]);
 
   if (!user || !isVisiblePath) return null;
 
@@ -37,8 +40,8 @@ export default function ReportBugButton() {
         window.open(BUG_REPORT_URL, "_blank", "noopener,noreferrer")
       }
       aria-label="Report a bug"
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
+      onMouseEnter={() => canHover && setExpanded(true)}
+      onMouseLeave={() => canHover && setExpanded(false)}
       className={`group fixed bottom-5 right-5 z-50 flex h-12 items-center overflow-hidden rounded-full bg-caap-blue text-white shadow-lg shadow-black/10 transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-caap-navy hover:shadow-xl active:scale-95 ${
         expanded ? "max-w-50 px-4" : "max-w-12 px-3.5"
       }`}

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@variant hover (&:hover);
 
 @theme {
   --color-caap-navy: #0b2447;
