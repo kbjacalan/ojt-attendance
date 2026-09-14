@@ -553,7 +553,7 @@ export default function Students() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:min-w-0">
             <FilterSelect
               label="University"
               value={universityFilter}
@@ -602,7 +602,7 @@ export default function Students() {
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
-                  className="rounded-lg border border-slate-300 pl-2 pr-1 py-1.5 text-xs sm:text-sm min-w-0 max-w-[160px] sm:max-w-none"
+                  className="rounded-lg border border-slate-300 pl-2 pr-1 py-1.5 text-xs sm:text-sm min-w-0 max-w-[160px] sm:max-w-[220px] sm:flex-none truncate"
                 >
                   {SORT_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -725,7 +725,7 @@ function FilterSelect({ label, value, onChange, options, optionLabels }) {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`w-full sm:w-auto rounded-lg border px-2 sm:px-3 py-1.5 text-xs sm:text-sm truncate ${
+      className={`w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[220px] rounded-lg border px-2 sm:px-3 py-1.5 text-xs sm:text-sm truncate ${
         value === "all"
           ? "border-slate-300 text-slate-600"
           : "border-caap-blue text-caap-navy bg-caap-blue/5 font-medium"
