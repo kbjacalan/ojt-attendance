@@ -1,5 +1,6 @@
 import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
+import ReportBugButton from "./ReportBugButton";
 
 /**
  * Wraps every authenticated route with the Navbar exactly once.
@@ -12,6 +13,7 @@ export default function Layout() {
     <>
       <Navbar />
       <Outlet />
+      <ReportBugButton />
     </>
   );
 }
