@@ -38,6 +38,14 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  function updateUser(patch) {
+    setUser((prev) => {
+      const updated = { ...prev, ...patch };
+      localStorage.setItem("user", JSON.stringify(updated));
+      return updated;
+    });
+  }
+
   useEffect(() => {
     function handleSessionExpired() {
       logout();
@@ -48,7 +56,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

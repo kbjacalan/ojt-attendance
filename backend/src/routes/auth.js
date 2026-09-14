@@ -1,6 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { login, changePassword, AuthError } = require("../services/authService");
+const {
+  login,
+  changePassword,
+  updateProfile,
+  AuthError,
+} = require("../services/authService");
 const { createUser, UserError } = require("../services/userService");
 const { authenticate } = require("../middleware/authenticate");
 const { validateOfficialHours } = require("../utils/officialHours");
@@ -140,6 +145,30 @@ router.post("/change-password", authenticate, async (req, res) => {
   try {
     await changePassword(req.user.userId, currentPassword, newPassword);
     res.json({ message: "Password changed successfully." });
+  } catch (err) {
+    if (err instanceof AuthError) {
+      return res.status(err.statusCode).json({ error: err.message });
+    }
+    console.error(err);
+    res.status(500).json({ error: "Internal server error." });
+  }
+});
+
+router.patch("/profile", authenticate, async (req, res) => {
+  const { fullName } = req.body;
+
+  if (!fullName || !fullName.trim()) {
+    return res.status(400).json({ error: "fullName is required." });
+  }
+  if (fullName.trim().length < 2) {
+    return res
+      .status(400)
+      .json({ error: "Full name must be at least 2 characters." });
+  }
+
+  try {
+    const user = await updateProfile(req.user.userId, fullName.trim());
+    res.json({ user });
   } catch (err) {
     if (err instanceof AuthError) {
       return res.status(err.statusCode).json({ error: err.message });

@@ -1,6 +1,7 @@
 import { UserCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import ChangePasswordForm from "../../components/common/ChangePasswordForm";
+import EditNameForm from "../../components/common/EditNameForm";
 
 export default function Account() {
   const { user } = useAuth();
@@ -20,10 +21,8 @@ export default function Account() {
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">
             Account Info
           </p>
-          <p className="text-sm font-semibold text-slate-800">
-            {user?.fullName}
-          </p>
-          <p className="text-sm text-slate-500">{user?.email}</p>
+          <p className="text-sm text-slate-500 mb-4">{user?.email}</p>
+          <EditNameForm />
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6">

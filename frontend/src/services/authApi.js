@@ -93,6 +93,32 @@ export async function listPublicControlNumbers() {
 }
 
 /**
+ * Self-service profile update (currently just full name) for the
+ * logged-in user (any role). Authenticated the same way as
+ * changePasswordRequest below.
+ */
+export async function updateProfileRequest(fullName) {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ fullName }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to update profile.");
+  }
+
+  return data; // { user }
+}
+
+/**
  * Self-service password change for the currently logged-in user
  * (any role). Unlike the other functions in this file, this one is
  * authenticated, so it attaches the stored token the same way

@@ -122,6 +122,30 @@ async function changePassword(userId, currentPassword, newPassword) {
   );
 }
 
+/**
+ * Self-service full name update for any authenticated user (student,
+ * in-charge, or admin). Unlike changePassword, this doesn't need
+ * re-verification of a secret, so it just trusts the JWT identity.
+ */
+async function updateProfile(userId, fullName) {
+  const { rows } = await pool.query(
+    `UPDATE users SET full_name = $1, updated_at = now() WHERE id = $2
+     RETURNING id, email, full_name, role`,
+    [fullName, userId],
+  );
+  if (rows.length === 0) {
+    throw new AuthError("User not found.", 404);
+  }
+
+  const user = rows[0];
+  return {
+    id: user.id,
+    email: user.email,
+    fullName: user.full_name,
+    role: user.role,
+  };
+}
+
 function verifyToken(token) {
   try {
     return jwt.verify(token, JWT_SECRET);
@@ -134,6 +158,7 @@ module.exports = {
   login,
   hashPassword,
   changePassword,
+  updateProfile,
   verifyToken,
   AuthError,
 };
