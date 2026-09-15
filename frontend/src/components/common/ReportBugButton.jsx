@@ -3,9 +3,7 @@ import { useLocation } from "react-router-dom";
 import { Bug } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
-const BUG_REPORT_MESSAGE =
-  "Hi! I'd like to report a bug in the CAAP Attendance system: ";
-const BUG_REPORT_URL = `https://m.me/khentbryanjacalan?text=${encodeURIComponent(BUG_REPORT_MESSAGE)}`;
+const BUG_REPORT_URL = "https://m.me/khentbryanjacalan";
 const AUTO_COLLAPSE_MS = 2600;
 const VISIBLE_PATHS = ["/attendance", "/dtr"];
 
