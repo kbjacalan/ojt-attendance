@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -9,6 +10,8 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import NotificationBadge from "../../components/common/NotificationBadge";
+import { listStudents } from "../../services/adminApi";
 
 function greetingFor(now) {
   const phHour = parseInt(
@@ -27,6 +30,23 @@ function greetingFor(now) {
 export default function Dashboard() {
   const { user } = useAuth();
   const firstName = user?.fullName?.split(" ")[0] || "Admin";
+  const [pendingStudents, setPendingStudents] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    listStudents()
+      .then((students) => {
+        if (!isMounted) return;
+        const count = students.filter(
+          (s) => s.approval_status === "pending",
+        ).length;
+        setPendingStudents(count);
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-10">
@@ -44,7 +64,10 @@ export default function Dashboard() {
             className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
-              <Users className="w-6 h-6 text-caap-blue" />
+              <span className="relative inline-flex">
+                <Users className="w-6 h-6 text-caap-blue" />
+                <NotificationBadge count={pendingStudents} />
+              </span>
               <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </div>
             <h2 className="font-semibold text-slate-800">Students</h2>
