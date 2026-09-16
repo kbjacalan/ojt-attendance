@@ -30,20 +30,19 @@ export default function AdminSubNav() {
   const { pathname } = useLocation();
 
   return (
-    <div className="bg-white border-b border-slate-200 print:hidden overflow-x-auto">
+    <div className="bg-caap-navy border-b border-slate-200 print:hidden overflow-x-auto">
       <div className="max-w-5xl mx-auto flex items-stretch text-xs text-white">
         {NAV_ITEMS.map((item, index) => {
           const Icon = item.icon;
           const active = isActivePath(pathname, item.to);
-          const color = active ? "bg-caap-blue" : "bg-white text-black";
 
           return (
             <Link
               key={item.to}
               to={item.to}
-              className={`relative flex items-center gap-1.5 whitespace-nowrap py-1.5 pl-4 pr-5 transition-colors ${color} ${
-                index > 0 ? "-ml-2" : ""
-              }`}
+              className={`relative flex items-center gap-1.5 whitespace-nowrap py-1.5 pl-4 pr-5 transition-colors ${
+                active ? "bg-caap-blue" : ""
+              } ${index > 0 ? "-ml-2" : ""}`}
               style={{
                 clipPath:
                   index === 0
