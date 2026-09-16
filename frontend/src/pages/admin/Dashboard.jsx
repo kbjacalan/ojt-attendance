@@ -6,6 +6,7 @@ import {
   UserCog,
   UserCircle,
   Hash,
+  ArrowUpRight,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
@@ -40,9 +41,12 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
             to="/admin/students"
-            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
-            <Users className="w-6 h-6 text-caap-blue mb-3" />
+            <div className="flex items-center justify-between mb-3">
+              <Users className="w-6 h-6 text-caap-blue" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </div>
             <h2 className="font-semibold text-slate-800">Students</h2>
             <p className="text-sm text-slate-500 mt-1">
               Manage student accounts and agency assignments.
@@ -51,9 +55,12 @@ export default function Dashboard() {
 
           <Link
             to="/admin/agencies"
-            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
-            <MapPin className="w-6 h-6 text-caap-blue mb-3" />
+            <div className="flex items-center justify-between mb-3">
+              <MapPin className="w-6 h-6 text-caap-blue" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </div>
             <h2 className="font-semibold text-slate-800">Agencies</h2>
             <p className="text-sm text-slate-500 mt-1">
               Manage host agencies and geofence settings.
@@ -62,9 +69,12 @@ export default function Dashboard() {
 
           <Link
             to="/admin/control-numbers"
-            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
-            <Hash className="w-6 h-6 text-caap-blue mb-3" />
+            <div className="flex items-center justify-between mb-3">
+              <Hash className="w-6 h-6 text-caap-blue" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </div>
             <h2 className="font-semibold text-slate-800">
               OJT Control Numbers
             </h2>
@@ -75,9 +85,12 @@ export default function Dashboard() {
 
           <Link
             to="/admin/staff"
-            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
-            <UserCog className="w-6 h-6 text-caap-blue mb-3" />
+            <div className="flex items-center justify-between mb-3">
+              <UserCog className="w-6 h-6 text-caap-blue" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </div>
             <h2 className="font-semibold text-slate-800">In-Charge Accounts</h2>
             <p className="text-sm text-slate-500 mt-1">
               Manage agency supervisor accounts.
@@ -86,9 +99,12 @@ export default function Dashboard() {
 
           <Link
             to="/admin/holidays"
-            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
-            <CalendarDays className="w-6 h-6 text-caap-blue mb-3" />
+            <div className="flex items-center justify-between mb-3">
+              <CalendarDays className="w-6 h-6 text-caap-blue" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </div>
             <h2 className="font-semibold text-slate-800">Holidays</h2>
             <p className="text-sm text-slate-500 mt-1">
               Manage the holiday calendar used in DTR generation.
@@ -97,9 +113,12 @@ export default function Dashboard() {
 
           <Link
             to="/admin/account"
-            className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
-            <UserCircle className="w-6 h-6 text-caap-blue mb-3" />
+            <div className="flex items-center justify-between mb-3">
+              <UserCircle className="w-6 h-6 text-caap-blue" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </div>
             <h2 className="font-semibold text-slate-800">My Account</h2>
             <p className="text-sm text-slate-500 mt-1">
               View your account info and change your password.
