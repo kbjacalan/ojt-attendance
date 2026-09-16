@@ -39,6 +39,7 @@ import OfficialHoursFields from "../../components/common/OfficialHoursFields";
 import { formatBatchLabel } from "../../utils/batch";
 import { validateOfficialHours } from "../../utils/officialHours";
 import { getManilaDateString } from "../../utils/manilaDate";
+import { scrollBelowStickyHeader } from "../../utils/scroll";
 
 const OJT_STATUS_LABELS = {
   pending: "Pending",
@@ -172,10 +173,7 @@ export default function Students() {
   const formSectionRef = useRef(null);
   useEffect(() => {
     if ((showForm || editingStudent) && formSectionRef.current) {
-      formSectionRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+      scrollBelowStickyHeader(formSectionRef.current);
     }
   }, [showForm, editingStudent]);
 

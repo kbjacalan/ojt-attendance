@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/common/ProtectedRoute";
 import GuestRoute from "./components/common/GuestRoute";
 import RootRedirect from "./components/common/RootRedirect";
 import Layout from "./components/common/Layout";
+import ScrollToTop from "./components/common/ScrollToTop";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import Attendance from "./pages/student/Attendance";
@@ -23,6 +24,7 @@ import AdminStudentDTRReview from "./pages/admin/StudentDTRReview";
 function App() {
   return (
     <AuthProvider>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<RootRedirect />} />
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Trash2, Pencil, MapPin, LoaderCircle } from "lucide-react";
 import {
@@ -10,6 +10,7 @@ import {
 } from "../../services/adminApi";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import LocationPicker from "../../components/admin/LocationPicker";
+import { scrollBelowStickyHeader } from "../../utils/scroll";
 
 export default function Agencies() {
   const [agencies, setAgencies] = useState([]);
@@ -19,6 +20,13 @@ export default function Agencies() {
   const [showForm, setShowForm] = useState(false);
   const [editingAgency, setEditingAgency] = useState(null);
   const [deletingAgency, setDeletingAgency] = useState(null);
+
+  const formSectionRef = useRef(null);
+  useEffect(() => {
+    if ((showForm || editingAgency) && formSectionRef.current) {
+      scrollBelowStickyHeader(formSectionRef.current);
+    }
+  }, [showForm, editingAgency]);
 
   useEffect(() => {
     loadData();
@@ -85,28 +93,30 @@ export default function Agencies() {
           </div>
         )}
 
-        {showForm && (
-          <AgencyForm
-            staff={staff}
-            onClose={() => setShowForm(false)}
-            onCreated={() => {
-              setShowForm(false);
-              loadData();
-            }}
-          />
-        )}
+        <div ref={formSectionRef}>
+          {showForm && (
+            <AgencyForm
+              staff={staff}
+              onClose={() => setShowForm(false)}
+              onCreated={() => {
+                setShowForm(false);
+                loadData();
+              }}
+            />
+          )}
 
-        {editingAgency && (
-          <AgencyForm
-            staff={staff}
-            agency={editingAgency}
-            onClose={() => setEditingAgency(null)}
-            onCreated={() => {
-              setEditingAgency(null);
-              loadData();
-            }}
-          />
-        )}
+          {editingAgency && (
+            <AgencyForm
+              staff={staff}
+              agency={editingAgency}
+              onClose={() => setEditingAgency(null)}
+              onCreated={() => {
+                setEditingAgency(null);
+                loadData();
+              }}
+            />
+          )}
+        </div>
 
         {deletingAgency && (
           <ConfirmModal

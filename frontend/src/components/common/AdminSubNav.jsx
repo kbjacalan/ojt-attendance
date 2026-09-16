@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -28,9 +29,22 @@ function isActivePath(pathname, to) {
 
 export default function AdminSubNav() {
   const { pathname } = useLocation();
+  const scrollContainerRef = useRef(null);
+  const activeLinkRef = useRef(null);
+
+  useEffect(() => {
+    activeLinkRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [pathname]);
 
   return (
-    <div className="bg-caap-navy border-b border-slate-200 print:hidden overflow-x-auto">
+    <div
+      ref={scrollContainerRef}
+      className="bg-caap-navy border-b border-slate-200 print:hidden overflow-x-auto"
+    >
       <div className="max-w-5xl mx-auto flex items-stretch text-xs text-white">
         {NAV_ITEMS.map((item, index) => {
           const Icon = item.icon;
@@ -40,6 +54,7 @@ export default function AdminSubNav() {
             <Link
               key={item.to}
               to={item.to}
+              ref={active ? activeLinkRef : null}
               className={`relative flex items-center gap-1.5 whitespace-nowrap py-1.5 pl-4 pr-5 transition-colors ${
                 active ? "bg-caap-blue" : ""
               } ${index > 0 ? "-ml-2" : ""}`}

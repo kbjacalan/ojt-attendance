@@ -268,7 +268,7 @@ export default function LocationPicker({
         <p className="text-xs text-red-600 mb-2">{searchError}</p>
       )}
 
-      <div className="relative">
+      <div className="relative isolate">
         <div
           ref={mapContainerRef}
           className="w-full h-80 rounded-xl border border-slate-300"
