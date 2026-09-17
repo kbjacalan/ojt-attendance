@@ -131,10 +131,10 @@ async function certifyDTR(studentId, monthStr, inChargeUserId, signature) {
   const dtr = await getMonthlyDTR(studentId, monthStr);
 
   const requiredHours = dtr.student.requiredHours;
-  if (requiredHours > 0 && dtr.grandTotal < requiredHours) {
+  if (requiredHours > 0 && dtr.cumulativeHours < requiredHours) {
     throw new InChargeError(
       `This student has not yet completed the required OJT hours ` +
-        `(${dtr.grandTotal.toFixed(2)} / ${requiredHours.toFixed(2)} hours). ` +
+        `(${dtr.cumulativeHours.toFixed(2)} / ${requiredHours.toFixed(2)} hours). ` +
         `Certification is only available after the required hours are met.`,
       400,
     );

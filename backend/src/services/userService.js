@@ -2,7 +2,10 @@ const pool = require("../config/db");
 const { hashPassword } = require("./authService");
 const { getManilaDateString } = require("../utils/time");
 const { computeDutyStatus } = require("../utils/duty");
-const { TIME_FIELDS, validateOfficialHours } = require("../utils/officialHours");
+const {
+  TIME_FIELDS,
+  validateOfficialHours,
+} = require("../utils/officialHours");
 
 class UserError extends Error {
   constructor(message, statusCode = 400) {
@@ -124,7 +127,7 @@ async function createUser({
 async function syncOjtStatus(studentId) {
   const { rows } = await pool.query(
     `SELECT sp.ojt_status, sp.required_hours,
-            COALESCE(SUM(al.total_hours), 0) AS logged_hours
+            COALESCE(SUM(al.total_hours), 0) AS cumulative_hours
      FROM student_profiles sp
      LEFT JOIN attendance_logs al ON al.student_id = sp.id
      WHERE sp.id = $1
@@ -133,17 +136,18 @@ async function syncOjtStatus(studentId) {
   );
   if (rows.length === 0) return null;
 
-  const { ojt_status, required_hours, logged_hours } = rows[0];
+  const { ojt_status, required_hours, cumulative_hours } = rows[0];
   const requiredHours = parseFloat(required_hours);
-  const loggedHours = parseFloat(logged_hours);
-  const meetsRequirement = requiredHours > 0 && loggedHours >= requiredHours;
+  const cumulativeHours = parseFloat(cumulative_hours);
+  const meetsRequirement =
+    requiredHours > 0 && cumulativeHours >= requiredHours;
 
   let nextStatus = null;
-  if (ojt_status === "pending" && loggedHours > 0) {
+  if (ojt_status === "pending" && cumulativeHours > 0) {
     nextStatus = meetsRequirement ? "completed" : "active";
   } else if (ojt_status === "active" && meetsRequirement) {
     nextStatus = "completed";
-  } else if (ojt_status === "completed" && loggedHours < requiredHours) {
+  } else if (ojt_status === "completed" && cumulativeHours < requiredHours) {
     nextStatus = "active";
   }
 
@@ -168,12 +172,18 @@ async function listStudents(dateStr) {
             a.id AS agency_id, a.name AS agency_name,
             cn.id AS control_number_id, cn.control_number,
             al.am_time_in, al.am_time_out, al.pm_time_in, al.pm_time_out,
-            al.ot_time_in, al.ot_time_out
+            al.ot_time_in, al.ot_time_out,
+            COALESCE(totals.cumulative_hours, 0) AS cumulative_hours
      FROM users u
      JOIN student_profiles sp ON sp.user_id = u.id
      LEFT JOIN agencies a ON a.id = sp.agency_id
      LEFT JOIN ojt_control_numbers cn ON cn.id = sp.control_number_id
      LEFT JOIN attendance_logs al ON al.student_id = sp.id AND al.log_date = $1
+     LEFT JOIN (
+       SELECT student_id, SUM(total_hours) AS cumulative_hours
+       FROM attendance_logs
+       GROUP BY student_id
+     ) totals ON totals.student_id = sp.id
      WHERE u.role = 'student'
      ORDER BY u.full_name ASC`,
     [targetDate],
@@ -187,10 +197,16 @@ async function listStudents(dateStr) {
       pm_time_out,
       ot_time_in,
       ot_time_out,
+      cumulative_hours,
       ...rest
     } = row;
     const duty = computeDutyStatus(row);
-    return { ...rest, ...duty };
+    return {
+      ...rest,
+      cumulative_hours:
+        Math.round((parseFloat(cumulative_hours) || 0) * 100) / 100,
+      ...duty,
+    };
   });
 }
 

@@ -142,10 +142,10 @@ export default function Attendance() {
   );
 
   const requiredHours = dtr?.student?.requiredHours || 0;
-  const grandTotal = dtr?.grandTotal || 0;
-  const hoursMet = requiredHours > 0 && grandTotal >= requiredHours;
+  const hoursLogged = dtr?.cumulativeHours || 0;
+  const hoursMet = requiredHours > 0 && hoursLogged >= requiredHours;
   const progressPercent =
-    requiredHours > 0 ? Math.min(100, (grandTotal / requiredHours) * 100) : 0;
+    requiredHours > 0 ? Math.min(100, (hoursLogged / requiredHours) * 100) : 0;
 
   // Reuses the same live position already being watched for the map, so
   // the button can warn/disable itself the moment we know the student is
@@ -277,7 +277,7 @@ export default function Attendance() {
                       hoursMet ? "text-emerald-600" : "text-caap-navy"
                     }`}
                   >
-                    {grandTotal}
+                    {hoursLogged}
                     {requiredHours > 0 && (
                       <span className="text-sm font-normal text-slate-400">
                         {" "}

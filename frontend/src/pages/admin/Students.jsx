@@ -903,6 +903,9 @@ function BatchGroup({
                         }`}
                         text={OJT_STATUS_LABELS[s.ojt_status || "active"]}
                       />
+                      <p className="text-[10px] text-slate-400 mt-1 truncate">
+                        {s.cumulative_hours ?? 0}/{s.required_hours ?? 0} hrs
+                      </p>
                     </td>
                     <td className="px-2 py-1.5">
                       {s.approval_status === "pending" && (
@@ -1095,6 +1098,9 @@ function StudentCard({
             }`}
             text={OJT_STATUS_LABELS[s.ojt_status || "active"]}
           />
+          <p className="text-[10px] text-slate-400 mt-1 truncate">
+            {s.cumulative_hours ?? 0}/{s.required_hours ?? 0} hrs
+          </p>
         </div>
         <div className="col-span-2 min-w-0">
           <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">

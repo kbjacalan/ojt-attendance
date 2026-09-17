@@ -33,6 +33,15 @@ async function getMonthlyDTR(studentId, monthStr) {
   }
   const student = studentResult.rows[0];
 
+  const cumulativeResult = await pool.query(
+    `SELECT COALESCE(SUM(total_hours), 0) AS cumulative_hours
+     FROM attendance_logs
+     WHERE student_id = $1`,
+    [studentId],
+  );
+  const cumulativeHours =
+    parseFloat(cumulativeResult.rows[0].cumulative_hours) || 0;
+
   const [year, month] = monthStr.split("-").map(Number);
   const daysInMonth = new Date(year, month, 0).getDate();
   const monthStart = `${monthStr}-01`;
@@ -134,6 +143,7 @@ async function getMonthlyDTR(studentId, monthStr) {
     },
     days,
     grandTotal: Math.round(grandTotal * 100) / 100,
+    cumulativeHours: Math.round(cumulativeHours * 100) / 100,
     certification: certRow
       ? {
           status: certRow.status,

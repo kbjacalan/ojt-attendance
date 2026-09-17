@@ -123,7 +123,7 @@ export default function StudentDTRReview() {
 
   const isCertified = dtr?.certification?.status === "certified";
   const requiredHours = dtr?.student?.requiredHours || 0;
-  const hoursMet = Boolean(dtr) && dtr.grandTotal >= requiredHours;
+  const hoursMet = Boolean(dtr) && dtr.cumulativeHours >= requiredHours;
   const certifyDisabledReason = !dtr
     ? null
     : !hoursMet
@@ -198,7 +198,7 @@ export default function StudentDTRReview() {
             }`}
           >
             <span>
-              {dtr.grandTotal.toFixed(2)} / {requiredHours.toFixed(2)} hrs
+              {dtr.cumulativeHours.toFixed(2)} / {requiredHours.toFixed(2)} hrs
               completed
             </span>
             {!hoursMet && (
@@ -646,8 +646,8 @@ function CertifyModal({
           <p className="text-xs text-slate-500 mb-4">
             {dtr.student.month} ·{" "}
             <span className="font-medium text-emerald-600">
-              {dtr.grandTotal.toFixed(2)} / {requiredHours.toFixed(2)} hours
-              completed
+              {dtr.cumulativeHours.toFixed(2)} / {requiredHours.toFixed(2)}{" "}
+              hours completed
             </span>
           </p>
 
