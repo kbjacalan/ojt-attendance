@@ -20,16 +20,22 @@ async function listMyStudents(inChargeUserId, dateStr) {
 
   const { rows } = await pool.query(
     `SELECT sp.id AS student_id, u.full_name, u.email, u.created_at, sp.course,
-            sp.university, sp.batch, sp.ojt_status,
+            sp.university, sp.batch, sp.ojt_status, sp.required_hours,
             a.id AS agency_id, a.name AS agency_name,
             cn.id AS control_number_id, cn.control_number,
             al.am_time_in, al.am_time_out, al.pm_time_in, al.pm_time_out,
-            al.ot_time_in, al.ot_time_out
+            al.ot_time_in, al.ot_time_out,
+            COALESCE(totals.cumulative_hours, 0) AS cumulative_hours
      FROM student_profiles sp
      JOIN users u ON u.id = sp.user_id
      JOIN agencies a ON a.id = sp.agency_id
      LEFT JOIN ojt_control_numbers cn ON cn.id = sp.control_number_id
      LEFT JOIN attendance_logs al ON al.student_id = sp.id AND al.log_date = $2
+     LEFT JOIN (
+       SELECT student_id, SUM(total_hours) AS cumulative_hours
+       FROM attendance_logs
+       GROUP BY student_id
+     ) totals ON totals.student_id = sp.id
      WHERE a.in_charge_id = $1
      ORDER BY u.full_name ASC`,
     [inChargeUserId, targetDate],
@@ -43,10 +49,16 @@ async function listMyStudents(inChargeUserId, dateStr) {
       pm_time_out,
       ot_time_in,
       ot_time_out,
+      cumulative_hours,
       ...rest
     } = row;
     const duty = computeDutyStatus(row);
-    return { ...rest, ...duty };
+    return {
+      ...rest,
+      cumulative_hours:
+        Math.round((parseFloat(cumulative_hours) || 0) * 100) / 100,
+      ...duty,
+    };
   });
 }
 

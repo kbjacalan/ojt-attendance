@@ -692,6 +692,9 @@ function BatchGroup({
                         }`}
                         text={OJT_STATUS_LABELS[s.ojt_status || "active"]}
                       />
+                      <p className="text-[10px] text-slate-400 mt-1 truncate">
+                        {s.cumulative_hours ?? 0}/{s.required_hours ?? 0} hrs
+                      </p>
                     </td>
                     <td className="px-2 py-1.5 text-right">
                       <Link
@@ -799,6 +802,9 @@ function StudentRecordCard({ student: s, isToday, selectedDate }) {
             }`}
             text={OJT_STATUS_LABELS[s.ojt_status || "active"]}
           />
+          <p className="text-[10px] text-slate-400 mt-1 truncate">
+            {s.cumulative_hours ?? 0}/{s.required_hours ?? 0} hrs
+          </p>
         </div>
       </div>
     </div>
