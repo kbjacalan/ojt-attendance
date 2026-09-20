@@ -18,6 +18,7 @@ import {
   listPendingOTRequests,
 } from "../../services/inchargeApi";
 import DutyStatusBadge from "../../components/common/DutyStatusBadge";
+import Select from "../../components/common/Select";
 import { formatBatchLabel } from "../../utils/batch";
 import { getManilaDateString } from "../../utils/manilaDate";
 
@@ -442,20 +443,26 @@ export default function StudentRecords() {
 
           {/* Filters — 2-column grid on mobile, single inline row from sm: up */}
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:min-w-0">
-            <FilterSelect
+            <Select
+              variant="filter"
+              size="sm"
               label="University"
               value={universityFilter}
               onChange={setUniversityFilter}
               options={universityOptions}
             />
-            <FilterSelect
+            <Select
+              variant="filter"
+              size="sm"
               label="Batch"
               value={batchFilter}
               onChange={setBatchFilter}
               options={batchOptions}
               optionLabels={batchOptionLabels}
             />
-            <FilterSelect
+            <Select
+              variant="filter"
+              size="sm"
               label="Status"
               value={ojtStatusFilter}
               onChange={setOjtStatusFilter}
@@ -463,7 +470,9 @@ export default function StudentRecords() {
               optionLabels={OJT_STATUS_LABELS}
             />
             {courseOptions.length > 0 && (
-              <FilterSelect
+              <Select
+                variant="filter"
+                size="sm"
                 label="Course/Program"
                 value={courseFilter}
                 onChange={setCourseFilter}
@@ -487,17 +496,15 @@ export default function StudentRecords() {
                 <span className="text-slate-500 hidden sm:inline shrink-0">
                   Sort by:
                 </span>
-                <select
+                <Select
+                  variant="plain"
+                  size="sm"
+                  fullWidth={false}
+                  className="min-w-0 max-w-[160px] sm:max-w-[220px] sm:flex-none"
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="rounded-lg border border-slate-300 pl-2 pr-1 py-1.5 text-xs sm:text-sm min-w-0 max-w-[160px] sm:max-w-[220px] sm:flex-none truncate"
-                >
-                  {SORT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSortBy}
+                  options={SORT_OPTIONS}
+                />
               </div>
             </div>
           </div>
@@ -561,27 +568,6 @@ function Truncate({ text, className = "", as: Tag = "span", title }) {
     >
       {text}
     </Tag>
-  );
-}
-
-function FilterSelect({ label, value, onChange, options, optionLabels }) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={`w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[220px] rounded-lg border px-2 sm:px-3 py-1.5 text-xs sm:text-sm truncate ${
-        value === "all"
-          ? "border-slate-300 text-slate-600"
-          : "border-caap-blue text-caap-navy bg-caap-blue/5 font-medium"
-      }`}
-    >
-      <option value="all">{label}: All</option>
-      {options.map((opt) => (
-        <option key={opt} value={opt}>
-          {optionLabels ? optionLabels[opt] : opt}
-        </option>
-      ))}
-    </select>
   );
 }
 

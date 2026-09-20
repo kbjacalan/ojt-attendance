@@ -10,6 +10,7 @@ import {
 } from "../../services/adminApi";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import LocationPicker from "../../components/admin/LocationPicker";
+import Select from "../../components/common/Select";
 import { scrollBelowStickyHeader } from "../../utils/scroll";
 
 export default function Agencies() {
@@ -48,6 +49,11 @@ export default function Agencies() {
       setLoading(false);
     }
   }
+
+  const inChargeOptions = [
+    { value: "", label: "Unassigned" },
+    ...staff.map((s) => ({ value: s.id, label: s.full_name })),
+  ];
 
   async function handleDelete(id) {
     try {
@@ -173,20 +179,14 @@ export default function Agencies() {
                         {a.student_count}
                       </td>
                       <td className="px-4 py-3">
-                        <select
+                        <Select
+                          variant="plain"
+                          fullWidth={false}
+                          size="sm"
                           value={a.in_charge_id || ""}
-                          onChange={(e) =>
-                            handleInChargeChange(a.id, e.target.value)
-                          }
-                          className="rounded-lg border border-slate-300 px-2 py-1 text-sm"
-                        >
-                          <option value="">Unassigned</option>
-                          {staff.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.full_name}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(v) => handleInChargeChange(a.id, v)}
+                          options={inChargeOptions}
+                        />
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-3">
@@ -270,20 +270,13 @@ export default function Agencies() {
                       <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1">
                         In-Charge
                       </p>
-                      <select
+                      <Select
+                        variant="plain"
+                        size="sm"
                         value={a.in_charge_id || ""}
-                        onChange={(e) =>
-                          handleInChargeChange(a.id, e.target.value)
-                        }
-                        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
-                      >
-                        <option value="">Unassigned</option>
-                        {staff.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.full_name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(v) => handleInChargeChange(a.id, v)}
+                        options={inChargeOptions}
+                      />
                     </div>
                   </div>
                 ))}
@@ -433,23 +426,16 @@ function AgencyForm({ staff, agency, onClose, onCreated }) {
           step="any"
         />
 
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">
-            In-Charge (optional)
-          </label>
-          <select
-            value={form.inChargeId}
-            onChange={(e) => setForm({ ...form, inChargeId: e.target.value })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">Unassigned</option>
-            {staff.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.full_name}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Select
+          label="In-Charge (optional)"
+          size="sm"
+          value={form.inChargeId}
+          onChange={(v) => setForm({ ...form, inChargeId: v })}
+          options={[
+            { value: "", label: "Unassigned" },
+            ...staff.map((s) => ({ value: s.id, label: s.full_name })),
+          ]}
+        />
       </div>
 
       {error && <div className="text-sm text-red-600">{error}</div>}

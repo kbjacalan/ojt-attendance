@@ -1,3 +1,5 @@
+import Select from "./Select";
+
 export default function ControlNumberSelect({
   id,
   label = "OJT Control Number",
@@ -9,53 +11,21 @@ export default function ControlNumberSelect({
   variant = "compact",
   helperText,
 }) {
-  const isSpacious = variant === "spacious";
-
   return (
-    <div>
-      <label
-        htmlFor={id}
-        className={
-          isSpacious
-            ? "block text-sm font-medium text-slate-700 mb-1"
-            : "block text-xs font-medium text-slate-600 mb-1"
-        }
-      >
-        {label}
-        {!required && isSpacious && (
-          <span className="text-slate-400 font-normal"> (optional)</span>
-        )}
-      </label>
-
-      {isSpacious && helperText && (
-        <p className="text-xs text-slate-400 mb-2">{helperText}</p>
-      )}
-
-      <select
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-        disabled={disabled}
-        className={
-          isSpacious
-            ? "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
-            : "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
-        }
-      >
-        <option value="" disabled={required}>
-          {required ? "Select a control number" : "Unassigned"}
-        </option>
-        {controlNumbers.map((cn) => (
-          <option key={cn.id} value={cn.id}>
-            {cn.control_number}
-          </option>
-        ))}
-      </select>
-
-      {!isSpacious && helperText && (
-        <p className="text-[11px] text-slate-400 mt-1">{helperText}</p>
-      )}
-    </div>
+    <Select
+      id={id}
+      label={label}
+      value={value}
+      onChange={onChange}
+      required={required}
+      disabled={disabled}
+      size={variant === "spacious" ? "md" : "sm"}
+      helperText={helperText}
+      placeholder={required ? "Select a control number" : "Unassigned"}
+      options={controlNumbers.map((cn) => ({
+        value: cn.id,
+        label: cn.control_number,
+      }))}
+    />
   );
 }

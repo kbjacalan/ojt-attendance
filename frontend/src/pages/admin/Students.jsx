@@ -35,6 +35,7 @@ import DutyStatusBadge from "../../components/common/DutyStatusBadge";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import AgencySelect from "../../components/common/AgencySelect";
 import ControlNumberSelect from "../../components/common/ControlNumberSelect";
+import Select from "../../components/common/Select";
 import OfficialHoursFields from "../../components/common/OfficialHoursFields";
 import { formatBatchLabel } from "../../utils/batch";
 import { validateOfficialHours } from "../../utils/officialHours";
@@ -58,8 +59,10 @@ const OJT_STATUS_STYLES = {
 const SORT_OPTIONS = [
   { value: "name_asc", label: "Name (A–Z)" },
   { value: "name_desc", label: "Name (Z–A)" },
-  { value: "university_asc", label: "University (A–Z)" },
-  { value: "university_desc", label: "University (Z–A)" },
+  { value: "controlno_asc", label: "OJT Control No. (A–Z)" },
+  { value: "controlno_desc", label: "OJT Control No. (Z–A)" },
+  { value: "agency_asc", label: "Agency (A–Z)" },
+  { value: "agency_desc", label: "Agency (Z–A)" },
   { value: "date_desc", label: "Date Registered (Newest)" },
   { value: "date_asc", label: "Date Registered (Oldest)" },
 ];
@@ -80,9 +83,13 @@ function sortStudents(list, sortBy) {
         av = (a.full_name || "").toLowerCase();
         bv = (b.full_name || "").toLowerCase();
         break;
-      case "university":
-        av = (a.university || "").toLowerCase();
-        bv = (b.university || "").toLowerCase();
+      case "controlno":
+        av = (a.control_number || "").toLowerCase();
+        bv = (b.control_number || "").toLowerCase();
+        break;
+      case "agency":
+        av = (a.agency_name || "").toLowerCase();
+        bv = (b.agency_name || "").toLowerCase();
         break;
       case "date":
         av = new Date(a.created_at).getTime();
@@ -552,20 +559,26 @@ export default function Students() {
           </div>
 
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:min-w-0">
-            <FilterSelect
+            <Select
+              variant="filter"
+              size="sm"
               label="University"
               value={universityFilter}
               onChange={setUniversityFilter}
               options={universityOptions}
             />
-            <FilterSelect
+            <Select
+              variant="filter"
+              size="sm"
               label="Batch"
               value={batchFilter}
               onChange={setBatchFilter}
               options={batchOptions}
               optionLabels={batchOptionLabels}
             />
-            <FilterSelect
+            <Select
+              variant="filter"
+              size="sm"
               label="Status"
               value={ojtStatusFilter}
               onChange={setOjtStatusFilter}
@@ -573,7 +586,9 @@ export default function Students() {
               optionLabels={OJT_STATUS_LABELS}
             />
             {courseOptions.length > 0 && (
-              <FilterSelect
+              <Select
+                variant="filter"
+                size="sm"
                 label="Course/Program"
                 value={courseFilter}
                 onChange={setCourseFilter}
@@ -597,17 +612,15 @@ export default function Students() {
                 <span className="text-slate-500 hidden sm:inline shrink-0">
                   Sort by:
                 </span>
-                <select
+                <Select
+                  variant="plain"
+                  size="sm"
+                  fullWidth={false}
+                  className="min-w-0 max-w-[160px] sm:max-w-[220px] sm:flex-none"
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="rounded-lg border border-slate-300 pl-2 pr-1 py-1.5 text-xs sm:text-sm min-w-0 max-w-[160px] sm:max-w-[220px] sm:flex-none truncate"
-                >
-                  {SORT_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSortBy}
+                  options={SORT_OPTIONS}
+                />
               </div>
             </div>
           </div>
@@ -715,27 +728,6 @@ export default function Students() {
         )}
       </div>
     </div>
-  );
-}
-
-function FilterSelect({ label, value, onChange, options, optionLabels }) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className={`w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[220px] rounded-lg border px-2 sm:px-3 py-1.5 text-xs sm:text-sm truncate ${
-        value === "all"
-          ? "border-slate-300 text-slate-600"
-          : "border-caap-blue text-caap-navy bg-caap-blue/5 font-medium"
-      }`}
-    >
-      <option value="all">{label}: All</option>
-      {options.map((opt) => (
-        <option key={opt} value={opt}>
-          {optionLabels ? optionLabels[opt] : opt}
-        </option>
-      ))}
-    </select>
   );
 }
 
@@ -1315,28 +1307,16 @@ function StudentForm({ agencies, controlNumbers, onClose, onCreated }) {
           min="1"
         />
 
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">
-            OJT Status
-          </label>
-          <select
-            value={form.ojtStatus}
-            onChange={(e) => setForm({ ...form, ojtStatus: e.target.value })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            {Object.entries(OJT_STATUS_LABELS)
-              .filter(([value]) => value !== "completed")
-              .map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-          </select>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Once OJT begins, status switches automatically between Ongoing and
-            Completed based on logged hours vs. required hours.
-          </p>
-        </div>
+        <Select
+          label="OJT Status"
+          size="sm"
+          value={form.ojtStatus}
+          onChange={(v) => setForm({ ...form, ojtStatus: v })}
+          helperText="Once OJT begins, status switches automatically between Ongoing and Completed based on logged hours vs. required hours."
+          options={Object.entries(OJT_STATUS_LABELS)
+            .filter(([value]) => value !== "completed")
+            .map(([value, label]) => ({ value, label }))}
+        />
 
         <AgencySelect
           id="new-student-agency"
@@ -1513,27 +1493,17 @@ function EditStudentForm({
           min="1"
         />
 
-        <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">
-            OJT Status
-          </label>
-          <select
-            value={form.ojtStatus}
-            onChange={(e) => setForm({ ...form, ojtStatus: e.target.value })}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            {Object.entries(OJT_STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <p className="text-[11px] text-slate-400 mt-1">
-            Ongoing/Completed are normally set automatically from logged hours
-            vs. required hours. Overriding here is a manual correction and will
-            be re-evaluated the next time this student’s hours change.
-          </p>
-        </div>
+        <Select
+          label="OJT Status"
+          size="sm"
+          value={form.ojtStatus}
+          onChange={(v) => setForm({ ...form, ojtStatus: v })}
+          helperText="Ongoing/Completed are normally set automatically from logged hours vs. required hours. Overriding here is a manual correction and will be re-evaluated the next time this student’s hours change."
+          options={Object.entries(OJT_STATUS_LABELS).map(([value, label]) => ({
+            value,
+            label,
+          }))}
+        />
 
         <AgencySelect
           id="edit-student-agency"

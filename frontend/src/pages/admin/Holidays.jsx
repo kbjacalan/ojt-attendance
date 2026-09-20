@@ -7,6 +7,7 @@ import {
   deleteHoliday,
 } from "../../services/adminApi";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import Select from "../../components/common/Select";
 
 function getCurrentYear() {
   return new Date().getFullYear();
@@ -65,17 +66,13 @@ export default function Holidays() {
         <div className="flex items-center justify-between gap-3 mb-4">
           <div className="flex items-center gap-2">
             <label className="text-sm text-slate-600">Year:</label>
-            <select
+            <Select
+              variant="plain"
+              fullWidth={false}
               value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm"
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setYear(Number(v))}
+              options={yearOptions.map((y) => ({ value: y, label: y }))}
+            />
           </div>
           <button
             onClick={() => setShowForm(true)}
