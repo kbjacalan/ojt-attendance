@@ -17,6 +17,7 @@ import {
   Clock,
   Search,
   X,
+  FunnelX,
   GraduationCap,
   Users,
 } from "lucide-react";
@@ -66,6 +67,14 @@ const SORT_OPTIONS = [
   { value: "date_desc", label: "Date Registered (Newest)" },
   { value: "date_asc", label: "Date Registered (Oldest)" },
 ];
+
+const CLEARED_FILTER_PARAMS = {
+  q: null,
+  university: null,
+  batch: null,
+  status: null,
+  course: null,
+};
 
 function getTodayValue() {
   return getManilaDateString();
@@ -368,21 +377,21 @@ export default function Students() {
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [students]);
 
-  const hasActiveFilters =
-    searchQuery.trim() !== "" ||
-    universityFilter !== "all" ||
-    batchFilter !== "all" ||
-    ojtStatusFilter !== "all" ||
-    courseFilter !== "all";
+  const activeFilterCount = [
+    searchQuery.trim() !== "",
+    universityFilter !== "all",
+    batchFilter !== "all",
+    ojtStatusFilter !== "all",
+    courseFilter !== "all",
+  ].filter(Boolean).length;
+  const hasActiveFilters = activeFilterCount > 0;
 
   function clearFilters() {
-    updateSearchParams({
-      q: null,
-      university: null,
-      batch: null,
-      status: null,
-      course: null,
-    });
+    updateSearchParams(CLEARED_FILTER_PARAMS);
+  }
+
+  function showAllStudents() {
+    updateSearchParams({ ...CLEARED_FILTER_PARAMS, approval: null });
   }
 
   // ----- Filtering pipeline -----
@@ -640,32 +649,35 @@ export default function Students() {
               />
             )}
 
-            <div className="col-span-2 flex items-center justify-between gap-2 sm:contents">
-              {hasActiveFilters ? (
-                <button
-                  onClick={clearFilters}
-                  className="text-xs text-slate-500 hover:text-slate-700 underline shrink-0"
-                >
-                  Clear filters
-                </button>
-              ) : (
-                <span className="sm:hidden" />
-              )}
-
-              <div className="flex items-center gap-1.5 text-xs sm:text-sm min-w-0 sm:ml-auto">
-                <span className="text-slate-500 hidden sm:inline shrink-0">
-                  Sort by:
-                </span>
+            <div className="col-span-2 flex flex-col gap-2 sm:contents">
+              <div className="flex min-w-0 items-center gap-2 text-xs sm:order-2 sm:ml-auto sm:gap-1.5 sm:text-sm">
+                <span className="shrink-0 text-slate-500">Sort by:</span>
                 <Select
                   variant="plain"
                   size="sm"
-                  fullWidth={false}
-                  className="min-w-0 max-w-[160px] sm:max-w-[220px] sm:flex-none"
+                  className="min-w-0 flex-1 sm:max-w-[220px] sm:flex-none"
                   value={sortBy}
                   onChange={setSortBy}
                   options={SORT_OPTIONS}
                 />
               </div>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  title="Clear filters"
+                  aria-label={`Clear filters (${activeFilterCount} active)`}
+                  className="inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-caap-blue/30 active:scale-95 sm:order-1 sm:w-auto sm:gap-1 sm:border-transparent sm:bg-transparent sm:px-1 sm:text-xs sm:hover:border-slate-200"
+                >
+                  <FunnelX className="h-3.5 w-3.5" />
+                  <span className="sm:hidden">Clear filters</span>
+                  <span className="hidden sm:inline">Clear</span>
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-caap-blue/10 px-1 text-[10px] font-semibold leading-none text-caap-navy tabular-nums">
+                    {activeFilterCount}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -731,14 +743,17 @@ export default function Students() {
                 ? "No students yet. Add one to get started."
                 : "No students match your search/filters."}
             </p>
-            {hasActiveFilters && students.length > 0 && (
-              <button
-                onClick={clearFilters}
-                className="mt-2 text-xs text-caap-blue hover:text-caap-navy underline"
-              >
-                Clear filters
-              </button>
-            )}
+            {(hasActiveFilters || approvalFilter !== "all") &&
+              students.length > 0 && (
+                <button
+                  type="button"
+                  onClick={showAllStudents}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-caap-navy px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-caap-blue focus:outline-none focus-visible:ring-2 focus-visible:ring-caap-blue/40 active:scale-95 sm:text-sm"
+                >
+                  <FunnelX className="h-3.5 w-3.5" />
+                  Show all students
+                </button>
+              )}
           </div>
         ) : (
           <div className="space-y-4">
