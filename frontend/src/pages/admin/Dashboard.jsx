@@ -61,7 +61,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
             to="/admin/students"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="relative inline-flex">
@@ -78,7 +78,7 @@ export default function Dashboard() {
 
           <Link
             to="/admin/agencies"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
               <MapPin className="w-6 h-6 text-caap-blue" />
@@ -92,7 +92,7 @@ export default function Dashboard() {
 
           <Link
             to="/admin/control-numbers"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
               <Hash className="w-6 h-6 text-caap-blue" />
@@ -108,7 +108,7 @@ export default function Dashboard() {
 
           <Link
             to="/admin/staff"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
               <UserCog className="w-6 h-6 text-caap-blue" />
@@ -122,7 +122,7 @@ export default function Dashboard() {
 
           <Link
             to="/admin/holidays"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
               <CalendarDays className="w-6 h-6 text-caap-blue" />
@@ -136,7 +136,7 @@ export default function Dashboard() {
 
           <Link
             to="/admin/account"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-shadow"
+            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
               <UserCircle className="w-6 h-6 text-caap-blue" />
