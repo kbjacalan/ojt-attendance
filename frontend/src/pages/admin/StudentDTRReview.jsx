@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
+import BackButton from "../../components/common/BackButton";
 import {
   LoaderCircle,
   ChevronLeft,
@@ -42,7 +43,9 @@ function getCurrentMonthValue() {
 
 export default function StudentDTRReview() {
   const { studentId } = useParams();
-  const [month, setMonth] = useState(getCurrentMonthValue());
+  const currentMonth = getCurrentMonthValue();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const month = searchParams.get("month") || currentMonth;
   const [dtr, setDtr] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -66,12 +69,23 @@ export default function StudentDTRReview() {
     }
   }
 
+  function setMonth(value) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === currentMonth) next.delete("month");
+        else next.set("month", value);
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
   function shiftMonth(delta) {
     const [year, mo] = month.split("-").map(Number);
     const newDate = new Date(year, mo - 1 + delta, 1);
-    setMonth(
-      `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, "0")}`,
-    );
+    const newMonth = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, "0")}`;
+    setMonth(newMonth);
   }
 
   const isCertified = dtr?.certification?.status === "certified";
@@ -79,12 +93,7 @@ export default function StudentDTRReview() {
   return (
     <div className="min-h-screen bg-slate-100 py-8 px-4 print:p-0">
       <div className="max-w-3xl mx-auto mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
-        <Link
-          to="/admin/students"
-          className="text-sm text-slate-500 hover:text-slate-800"
-        >
-          ← Back to Students
-        </Link>
+        <BackButton fallbackTo="/admin/students" label="Back to Students" />
 
         <div className="flex items-center justify-between gap-2 sm:justify-end">
           <div className="flex items-center gap-1">

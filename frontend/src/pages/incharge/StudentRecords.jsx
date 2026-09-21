@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   LoaderCircle,
   FileText,
@@ -118,19 +118,59 @@ function getLatestBatchKey(list) {
 
 export default function StudentRecords() {
   const today = getTodayValue();
-  const [selectedDate, setSelectedDate] = useState(today);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [pendingOtCount, setPendingOtCount] = useState(0);
 
-  // Search, filters & sorting
-  const [searchQuery, setSearchQuery] = useState("");
-  const [universityFilter, setUniversityFilter] = useState("all");
-  const [batchFilter, setBatchFilter] = useState("all");
-  const [ojtStatusFilter, setOjtStatusFilter] = useState("all");
-  const [courseFilter, setCourseFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("name_asc");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const selectedDate = searchParams.get("date") || today;
+  const searchQuery = searchParams.get("q") || "";
+  const universityFilter = searchParams.get("university") || "all";
+  const batchFilter = searchParams.get("batch") || "all";
+  const ojtStatusFilter = searchParams.get("status") || "all";
+  const courseFilter = searchParams.get("course") || "all";
+  const sortBy = searchParams.get("sort") || "name_asc";
+
+  function updateSearchParams(updates) {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        for (const [key, value] of Object.entries(updates)) {
+          if (value === null || value === undefined || value === "") {
+            next.delete(key);
+          } else {
+            next.set(key, value);
+          }
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
+  function setSelectedDate(value) {
+    updateSearchParams({ date: value === today ? null : value });
+  }
+  function setSearchQuery(value) {
+    updateSearchParams({ q: value });
+  }
+  function setUniversityFilter(value) {
+    updateSearchParams({ university: value === "all" ? null : value });
+  }
+  function setBatchFilter(value) {
+    updateSearchParams({ batch: value === "all" ? null : value });
+  }
+  function setOjtStatusFilter(value) {
+    updateSearchParams({ status: value === "all" ? null : value });
+  }
+  function setCourseFilter(value) {
+    updateSearchParams({ course: value === "all" ? null : value });
+  }
+  function setSortBy(value) {
+    updateSearchParams({ sort: value === "name_asc" ? null : value });
+  }
 
   // Which batch groups are collapsed (collapsed = hidden). Starts empty
   // and is populated by the "auto-expand latest batch" effect below
@@ -209,9 +249,8 @@ export default function StudentRecords() {
   function shiftDate(deltaDays) {
     const [y, m, d] = selectedDate.split("-").map(Number);
     const newDate = new Date(y, m - 1, d + deltaDays);
-    setSelectedDate(
-      `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, "0")}-${String(newDate.getDate()).padStart(2, "0")}`,
-    );
+    const newDateStr = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, "0")}-${String(newDate.getDate()).padStart(2, "0")}`;
+    setSelectedDate(newDateStr);
   }
 
   // ----- Derived filter option lists -----
@@ -250,11 +289,13 @@ export default function StudentRecords() {
     courseFilter !== "all";
 
   function clearFilters() {
-    setSearchQuery("");
-    setUniversityFilter("all");
-    setBatchFilter("all");
-    setOjtStatusFilter("all");
-    setCourseFilter("all");
+    updateSearchParams({
+      q: null,
+      university: null,
+      batch: null,
+      status: null,
+      course: null,
+    });
   }
 
   // ----- Filtering pipeline -----

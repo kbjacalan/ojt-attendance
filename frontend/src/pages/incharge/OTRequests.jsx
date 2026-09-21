@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import BackButton from "../../components/common/BackButton";
 import {
-  ArrowLeft,
   LoaderCircle,
   Clock,
   CheckCircle2,
@@ -62,13 +61,11 @@ export default function OTRequests() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8">
       <div className="max-w-3xl mx-auto">
-        <Link
-          to="/incharge/records"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-caap-navy mb-4"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to My Students
-        </Link>
+        <BackButton
+          fallbackTo="/incharge/records"
+          label="Back to My Students"
+          className="mb-4"
+        />
 
         <div className="flex items-center gap-2 mb-1">
           <Clock className="w-6 h-6 text-caap-blue shrink-0" />

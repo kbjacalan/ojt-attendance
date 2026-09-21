@@ -6,7 +6,7 @@ import {
   ChevronRight,
   MessageSquare,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import BackButton from "../../components/common/BackButton";
 import { getMyDTR } from "../../services/dtrApi";
 import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
@@ -76,12 +76,7 @@ export default function DTRView() {
     <div className="min-h-screen bg-slate-100 py-8 px-4 print:p-0">
       {/* Toolbar — hidden when printing */}
       <div className="max-w-3xl mx-auto mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
-        <Link
-          to="/attendance"
-          className="text-sm text-slate-500 hover:text-slate-800"
-        >
-          ← Back to Attendance
-        </Link>
+        <BackButton fallbackTo="/attendance" label="Back to Attendance" />
 
         <div className="flex items-center justify-between gap-2 sm:justify-end">
           <div className="flex items-center gap-1">
