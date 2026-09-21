@@ -8,14 +8,10 @@ import {
   X,
 } from "lucide-react";
 import { requestOvertime, cancelOvertimeRequest } from "../../services/otApi";
+import { to12Hour } from "../../utils/officialHours";
 
-function to12Hour(time24) {
-  if (!time24) return "";
-  const [hStr, mStr] = time24.slice(0, 5).split(":");
-  let h = parseInt(hStr, 10);
-  const period = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return `${h}:${mStr} ${period}`;
+function formatRange(start, end) {
+  return `${to12Hour(start)} – ${to12Hour(end)}`;
 }
 
 const STATUS_STYLES = {
@@ -49,27 +45,37 @@ function rangesOverlap(aStart, aEnd, bStart, bEnd) {
   return aStart < bEnd && bStart < aEnd;
 }
 
-function findOfficialHoursConflict(
-  requestedStart,
-  requestedEnd,
-  officialHours,
-) {
+function getShiftSegments(officialHours) {
   const { amStart, amEnd, pmStart, pmEnd } = officialHours || {};
-  if (
-    amStart &&
-    amEnd &&
-    rangesOverlap(requestedStart, requestedEnd, amStart, amEnd)
-  ) {
-    return `That overlaps your official morning hours (${to12Hour(amStart)}–${to12Hour(amEnd)}).`;
+  const segments = [];
+  if (amStart && amEnd) {
+    segments.push({
+      key: "morning",
+      label: "Morning",
+      start: amStart.slice(0, 5),
+      end: amEnd.slice(0, 5),
+    });
   }
-  if (
-    pmStart &&
-    pmEnd &&
-    rangesOverlap(requestedStart, requestedEnd, pmStart, pmEnd)
-  ) {
-    return `That overlaps your official afternoon hours (${to12Hour(pmStart)}–${to12Hour(pmEnd)}).`;
+  if (pmStart && pmEnd) {
+    segments.push({
+      key: "afternoon",
+      label: "Afternoon",
+      start: pmStart.slice(0, 5),
+      end: pmEnd.slice(0, 5),
+    });
   }
-  return null;
+  return segments;
+}
+
+function findOfficialHoursConflict(requestedStart, requestedEnd, segments) {
+  const hit = segments.find((segment) =>
+    rangesOverlap(requestedStart, requestedEnd, segment.start, segment.end),
+  );
+  if (!hit) return null;
+  return {
+    key: hit.key,
+    message: `That overlaps your ${hit.key} hours.`,
+  };
 }
 
 export default function OvertimeRequestPanel({
@@ -88,6 +94,12 @@ export default function OvertimeRequestPanel({
 
   if (isUnassigned) return null;
 
+  const segments = getShiftSegments(officialHours);
+  const liveConflict =
+    requestedStart && requestedEnd && requestedEnd > requestedStart
+      ? findOfficialHoursConflict(requestedStart, requestedEnd, segments)
+      : null;
+
   async function handleSubmit(e) {
     e.preventDefault();
     if (!requestedStart || !requestedEnd) {
@@ -101,10 +113,10 @@ export default function OvertimeRequestPanel({
     const conflict = findOfficialHoursConflict(
       requestedStart,
       requestedEnd,
-      officialHours,
+      segments,
     );
     if (conflict) {
-      setError(`${conflict} Overtime can't overlap your regular shift.`);
+      setError(conflict.message);
       return;
     }
 
@@ -202,49 +214,74 @@ export default function OvertimeRequestPanel({
         </button>
       </div>
 
-      {(officialHours?.amStart || officialHours?.pmStart) && (
-        <p className="text-[11px] text-slate-400 mb-3">
-          Your official hours:{" "}
-          {officialHours.amStart && officialHours.amEnd && (
-            <>
-              {to12Hour(officialHours.amStart)}–{to12Hour(officialHours.amEnd)}
-            </>
-          )}
-          {officialHours.amStart && officialHours.pmStart && ", "}
-          {officialHours.pmStart && officialHours.pmEnd && (
-            <>
-              {to12Hour(officialHours.pmStart)}–{to12Hour(officialHours.pmEnd)}
-            </>
-          )}
-          . Overtime can't overlap these.
-        </p>
+      {segments.length > 0 && (
+        <div
+          id="ot-official-hours"
+          className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600"
+        >
+          <p className="font-semibold text-slate-800">Your regular hours</p>
+          <dl className="mt-1.5 space-y-1">
+            {segments.map((segment) => (
+              <div
+                key={segment.key}
+                className={`-mx-1.5 flex items-center justify-between gap-3 rounded-md px-1.5 py-0.5 transition-colors ${
+                  liveConflict?.key === segment.key
+                    ? "bg-red-100 text-red-700"
+                    : ""
+                }`}
+              >
+                <dt>{segment.label}</dt>
+                <dd className="font-medium tabular-nums">
+                  {formatRange(segment.start, segment.end)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-2">Overtime has to fall outside these hours.</p>
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              Start
-            </label>
-            <input
-              type="time"
-              value={requestedStart}
-              onChange={(e) => setRequestedStart(e.target.value)}
-              required
-              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
-            />
+        <div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                Start
+              </label>
+              <input
+                type="time"
+                value={requestedStart}
+                onChange={(e) => setRequestedStart(e.target.value)}
+                required
+                aria-describedby={
+                  segments.length > 0 ? "ot-official-hours" : undefined
+                }
+                className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                End
+              </label>
+              <input
+                type="time"
+                value={requestedEnd}
+                onChange={(e) => setRequestedEnd(e.target.value)}
+                required
+                aria-describedby={
+                  segments.length > 0 ? "ot-official-hours" : undefined
+                }
+                className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
-              End
-            </label>
-            <input
-              type="time"
-              value={requestedEnd}
-              onChange={(e) => setRequestedEnd(e.target.value)}
-              required
-              className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
-            />
+          <div aria-live="polite">
+            {liveConflict && (
+              <div className="mt-2 flex items-start gap-2 text-sm text-red-600">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{liveConflict.message}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -270,8 +307,8 @@ export default function OvertimeRequestPanel({
 
         <button
           type="submit"
-          disabled={submitting}
-          className="w-full flex items-center justify-center gap-2 rounded-xl bg-caap-navy hover:bg-caap-blue text-white font-medium py-2.5 disabled:opacity-50"
+          disabled={submitting || Boolean(liveConflict)}
+          className="w-full flex items-center justify-center gap-2 rounded-xl bg-caap-navy hover:bg-caap-blue text-white font-medium py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? (
             <LoaderCircle className="w-4 h-4 animate-spin" />
@@ -279,7 +316,7 @@ export default function OvertimeRequestPanel({
             "Send Request"
           )}
         </button>
-        <p className="text-[11px] text-slate-400 text-center">
+        <p className="text-xs text-slate-500 text-center">
           Your in-charge will review this before you can time in for overtime.
         </p>
       </form>
