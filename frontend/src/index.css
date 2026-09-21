@@ -2,6 +2,8 @@
 @variant hover (&:hover);
 
 @theme {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
   --color-caap-navy: #0b2447;
   --color-caap-blue: #19376d;
   --color-caap-sky: #576cbc;
