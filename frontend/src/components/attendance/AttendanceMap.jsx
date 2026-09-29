@@ -185,29 +185,26 @@ export default function AttendanceMap({
         </div>
       )}
 
-      {/* Agency load error (e.g. unassigned) */}
-      {!agencyLoading && agencyError && (
-        <div className="absolute inset-0 bg-bg-secondary flex items-center justify-center px-6 text-center">
-          <div className="flex flex-col items-center gap-2 text-text-secondary text-sm">
-            <AlertTriangle className="w-5 h-5 text-amber-500" />
-            {agencyError}
-          </div>
-        </div>
-      )}
-
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[900]">
         <div className="bg-gradient-to-b from-black/55 to-transparent pt-4">
           <div className="max-w-md mx-auto px-4 text-text-inverse">
             <h1 className="text-lg font-bold drop-shadow-sm">{greetingLine}</h1>
-            <p className="text-xs text-text-inverse/80 mt-0.5">{dateTimeLine}</p>
+            <p className="text-xs text-text-inverse/80 mt-0.5">
+              {dateTimeLine}
+            </p>
           </div>
         </div>
 
-        {/* Geofence status pill */}
-        {!agencyLoading && !agencyError && (
+        {/* Geofence / status pill */}
+        {!agencyLoading && (
           <div className="px-4 pt-4">
             <div className="mx-auto w-full max-w-sm">
-              {geofence ? (
+              {agencyError ? (
+                <div className="flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-center text-sm font-medium shadow-md border bg-error-subtle/95 text-error border-error-border">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  You&apos;re not assigned to an agency yet
+                </div>
+              ) : geofence ? (
                 <div
                   className={`flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border ${
                     geofence.withinRadius
@@ -217,7 +214,9 @@ export default function AttendanceMap({
                 >
                   <span
                     className={`w-2 h-2 rounded-full ${
-                      geofence.withinRadius ? "bg-success-subtle0" : "bg-warning-subtle0"
+                      geofence.withinRadius
+                        ? "bg-success-subtle0"
+                        : "bg-warning-subtle0"
                     }`}
                   />
                   {geofence.withinRadius
