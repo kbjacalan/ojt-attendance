@@ -32,7 +32,7 @@ export default function BackButton({
     <Link
       to={fallbackTo}
       onClick={handleClick}
-      className={`inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 ${className}`}
+      className={`inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary ${className}`}
     >
       <ArrowLeft
         className="w-3 h-3 shrink-0 translate-y-px"

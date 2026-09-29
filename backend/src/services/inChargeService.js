@@ -1,6 +1,7 @@
 const pool = require("../config/db");
 const { getMonthlyDTR } = require("./dtrService");
 const { getManilaDateString } = require("../utils/time");
+const { getMonthBounds: monthBounds } = require("../utils/month");
 const { computeDutyStatus } = require("../utils/duty");
 
 class InChargeError extends Error {
@@ -89,19 +90,6 @@ async function assertStudentBelongsToInCharge(studentId, inChargeUserId) {
 async function getStudentDTRForReview(studentId, monthStr, inChargeUserId) {
   await assertStudentBelongsToInCharge(studentId, inChargeUserId);
   return getMonthlyDTR(studentId, monthStr);
-}
-
-/**
- * Given a 'YYYY-MM' string, returns the first and last calendar-date
- * strings of that month (e.g. '2026-07-01' / '2026-07-31').
- */
-function monthBounds(monthStr) {
-  const [year, month] = monthStr.split("-").map(Number);
-  const daysInMonth = new Date(year, month, 0).getDate();
-  return {
-    monthStart: `${monthStr}-01`,
-    monthEnd: `${monthStr}-${String(daysInMonth).padStart(2, "0")}`,
-  };
 }
 
 // A day only counts as certifiable if at least one full in/out pair was

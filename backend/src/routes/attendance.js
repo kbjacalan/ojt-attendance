@@ -5,13 +5,13 @@ const {
   timeOut,
   correctAttendanceLog,
   getMyAgencyGeofence,
-  AttendanceError,
 } = require("../services/attendanceService");
 const {
   assertStudentBelongsToInCharge,
-  InChargeError,
 } = require("../services/inChargeService");
 const { authenticate, requireRole } = require("../middleware/authenticate");
+const { asyncHandler } = require("../middleware/errorHandler");
+const { isDateString } = require("../utils/validators");
 
 function validateCoordinates(req, res, next) {
   const { latitude, longitude } = req.body;
@@ -44,23 +44,19 @@ router.post(
   requireRole("student"),
   validateCoordinates,
   validatePeriod,
-  async (req, res) => {
-    try {
-      const result = await timeIn({
-        studentId: req.user.studentId,
-        latitude: req.body.latitude,
-        longitude: req.body.longitude,
-        period: req.body.period,
-      });
-      res.json({
-        message: `Timed in successfully (${PERIOD_LABEL[result.period]}).`,
-        distanceMeters: result.distanceMeters,
-        log: result.log,
-      });
-    } catch (err) {
-      handleError(err, res);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const result = await timeIn({
+      studentId: req.user.studentId,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
+      period: req.body.period,
+    });
+    res.json({
+      message: `Timed in successfully (${PERIOD_LABEL[result.period]}).`,
+      distanceMeters: result.distanceMeters,
+      log: result.log,
+    });
+  }),
 );
 
 router.post(
@@ -69,23 +65,19 @@ router.post(
   requireRole("student"),
   validateCoordinates,
   validatePeriod,
-  async (req, res) => {
-    try {
-      const result = await timeOut({
-        studentId: req.user.studentId,
-        latitude: req.body.latitude,
-        longitude: req.body.longitude,
-        period: req.body.period,
-      });
-      res.json({
-        message: `Timed out successfully (${PERIOD_LABEL[result.period]}).`,
-        distanceMeters: result.distanceMeters,
-        log: result.log,
-      });
-    } catch (err) {
-      handleError(err, res);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const result = await timeOut({
+      studentId: req.user.studentId,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
+      period: req.body.period,
+    });
+    res.json({
+      message: `Timed out successfully (${PERIOD_LABEL[result.period]}).`,
+      distanceMeters: result.distanceMeters,
+      log: result.log,
+    });
+  }),
 );
 
 /**
@@ -100,14 +92,10 @@ router.get(
   "/my-agency",
   authenticate,
   requireRole("student"),
-  async (req, res) => {
-    try {
-      const agency = await getMyAgencyGeofence(req.user.studentId);
-      res.json(agency);
-    } catch (err) {
-      handleError(err, res);
-    }
-  },
+  asyncHandler(async (req, res) => {
+    const agency = await getMyAgencyGeofence(req.user.studentId);
+    res.json(agency);
+  }),
 );
 
 /**
@@ -123,48 +111,34 @@ router.patch(
   "/:studentId/:date",
   authenticate,
   requireRole("in_charge", "admin"),
-  async (req, res) => {
+  asyncHandler(async (req, res) => {
     const { studentId, date } = req.params;
     const { remarks, ...times } = req.body;
 
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!isDateString(date)) {
       return res
         .status(400)
         .json({ error: "date must be in YYYY-MM-DD format." });
     }
 
-    try {
-      if (req.user.role === "in_charge") {
-        await assertStudentBelongsToInCharge(studentId, req.user.userId);
-      }
-
-      const { warnings, ...updatedLog } = await correctAttendanceLog({
-        studentId,
-        dateStr: date,
-        times,
-        remarks,
-        correctedByUserId: req.user.userId,
-      });
-
-      res.json({
-        message: "Attendance corrected successfully.",
-        log: updatedLog,
-        warnings,
-      });
-    } catch (err) {
-      handleError(err, res);
+    if (req.user.role === "in_charge") {
+      await assertStudentBelongsToInCharge(studentId, req.user.userId);
     }
-  },
-);
 
-function handleError(err, res) {
-  if (err instanceof AttendanceError || err instanceof InChargeError) {
-    return res
-      .status(err.statusCode)
-      .json({ error: err.message, code: err.code || undefined });
-  }
-  console.error(err);
-  res.status(500).json({ error: "Internal server error." });
-}
+    const { warnings, ...updatedLog } = await correctAttendanceLog({
+      studentId,
+      dateStr: date,
+      times,
+      remarks,
+      correctedByUserId: req.user.userId,
+    });
+
+    res.json({
+      message: "Attendance corrected successfully.",
+      log: updatedLog,
+      warnings,
+    });
+  }),
+);
 
 module.exports = router;

@@ -1,13 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const { authenticate, requireRole } = require("../middleware/authenticate");
+const { asyncHandler } = require("../middleware/errorHandler");
 const {
   listAgencies,
   getAgencyById,
   createAgency,
   updateAgency,
   deleteAgency,
-  AgencyError,
 } = require("../services/agencyService");
 
 /**
@@ -18,46 +18,44 @@ const {
  * considered "active" — this app has no separate inactive/archived
  * state for agencies.
  */
-router.get("/public", async (req, res) => {
-  try {
+router.get(
+  "/public",
+  asyncHandler(async (req, res) => {
     const agencies = await listAgencies();
     res.json(agencies.map((a) => ({ id: a.id, name: a.name })));
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
 router.use(authenticate, requireRole("admin"));
 
-router.get("/", async (req, res) => {
-  try {
+router.get(
+  "/",
+  asyncHandler(async (req, res) => {
     const agencies = await listAgencies();
     res.json(agencies);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.get("/:id", async (req, res) => {
-  try {
+router.get(
+  "/:id",
+  asyncHandler(async (req, res) => {
     const agency = await getAgencyById(req.params.id);
     res.json(agency);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.post("/", async (req, res) => {
-  const { name, address, latitude, longitude, radiusMeters, inChargeId } =
-    req.body;
+router.post(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { name, address, latitude, longitude, radiusMeters, inChargeId } =
+      req.body;
 
-  if (!name || typeof latitude !== "number" || typeof longitude !== "number") {
-    return res
-      .status(400)
-      .json({ error: "name, latitude, and longitude are required." });
-  }
+    if (!name || typeof latitude !== "number" || typeof longitude !== "number") {
+      return res
+        .status(400)
+        .json({ error: "name, latitude, and longitude are required." });
+    }
 
-  try {
     const agency = await createAgency({
       name,
       address,
@@ -67,35 +65,23 @@ router.post("/", async (req, res) => {
       inChargeId,
     });
     res.status(201).json(agency);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.put("/:id", async (req, res) => {
-  try {
+router.put(
+  "/:id",
+  asyncHandler(async (req, res) => {
     const agency = await updateAgency(req.params.id, req.body);
     res.json(agency);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.delete("/:id", async (req, res) => {
-  try {
+router.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
     await deleteAgency(req.params.id);
     res.status(204).send();
-  } catch (err) {
-    handleError(err, res);
-  }
-});
-
-function handleError(err, res) {
-  if (err instanceof AgencyError) {
-    return res.status(err.statusCode).json({ error: err.message });
-  }
-  console.error(err);
-  res.status(500).json({ error: "Internal server error." });
-}
+  }),
+);
 
 module.exports = router;

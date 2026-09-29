@@ -13,6 +13,7 @@ import AgencySelect from "../../components/common/AgencySelect";
 import ControlNumberSelect from "../../components/common/ControlNumberSelect";
 import OfficialHoursFields from "../../components/common/OfficialHoursFields";
 import caapLogo from "../../assets/caap_logo.png";
+import TextInput from "../../components/common/TextInput";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -124,21 +125,21 @@ export default function Signup() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-caap-navy to-caap-blue flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl p-8 text-center">
-          <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3">
-            <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+      <div className="min-h-screen bg-brand flex items-center justify-center px-4">
+        <div className="w-full max-w-sm bg-bg-primary rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-success-subtle flex items-center justify-center mx-auto mb-3">
+            <CheckCircle2 className="w-7 h-7 text-success" />
           </div>
-          <h1 className="text-lg font-bold text-slate-900 mb-2">
+          <h1 className="text-lg font-bold text-text-primary mb-2">
             Registration Submitted
           </h1>
-          <p className="text-sm text-slate-600 mb-6">
+          <p className="text-sm text-text-secondary mb-6">
             Your account has been created and is awaiting admin approval. You
             can log in once approved.
           </p>
           <Link
             to="/login"
-            className="inline-flex items-center justify-center w-full rounded-lg bg-caap-navy text-white font-medium py-2.5 hover:bg-caap-blue transition-colors"
+            className="inline-flex items-center justify-center w-full rounded-lg bg-brand text-text-inverse font-medium py-2.5 hover:bg-brand-hover disabled:hover:bg-brand transition-colors"
           >
             Back to Log In
           </Link>
@@ -148,7 +149,7 @@ export default function Signup() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen bg-bg-primary flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm rounded-2xl p-8">
         <div className="text-center mb-6">
           <img
@@ -156,8 +157,8 @@ export default function Signup() {
             alt="CAAP Philippines"
             className="w-20 h-auto mx-auto mb-3"
           />
-          <h1 className="text-xl font-bold text-caap-navy">Student Sign Up</h1>
-          <p className="text-sm text-slate-500">
+          <h1 className="text-xl font-bold text-text-primary">Student Sign Up</h1>
+          <p className="text-sm text-text-secondary">
             CAAP OJT Attendance, Dipolog Airport
           </p>
         </div>
@@ -167,11 +168,11 @@ export default function Signup() {
             <div>
               <label
                 htmlFor="signup-fullName"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-text-primary mb-1"
               >
                 Full Name
               </label>
-              <input
+              <TextInput
                 id="signup-fullName"
                 type="text"
                 value={form.fullName}
@@ -180,36 +181,34 @@ export default function Signup() {
                 autoComplete="name"
                 placeholder="e.g. Juan Dela Cruz"
                 disabled={submitting}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
               />
             </div>
 
             <div>
               <label
                 htmlFor="signup-course"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-text-primary mb-1"
               >
                 Course
               </label>
-              <input
+              <TextInput
                 id="signup-course"
                 type="text"
                 value={form.course}
                 onChange={(e) => setForm({ ...form, course: e.target.value })}
                 placeholder="e.g. BSIT"
                 disabled={submitting}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
               />
             </div>
 
             <div>
               <label
                 htmlFor="signup-university"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-text-primary mb-1"
               >
                 University
               </label>
-              <input
+              <TextInput
                 id="signup-university"
                 type="text"
                 value={form.university}
@@ -218,7 +217,6 @@ export default function Signup() {
                 }
                 placeholder="e.g. JRMSU"
                 disabled={submitting}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
               />
             </div>
           </FormSection>
@@ -227,26 +225,25 @@ export default function Signup() {
             <div>
               <label
                 htmlFor="signup-batch"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-text-primary mb-1"
               >
                 OJT Batch
               </label>
-              <input
+              <TextInput
                 id="signup-batch"
                 type="month"
                 value={form.batch}
                 onChange={(e) => setForm({ ...form, batch: e.target.value })}
                 required
                 disabled={submitting}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
               />
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-text-secondary mt-1">
                 The month and year your OJT starts, this is your batch.
                 {form.batch && (
                   <>
                     {" "}
                     You'll be grouped under{" "}
-                    <span className="font-medium text-slate-500">
+                    <span className="font-medium text-text-secondary">
                       {formatBatchLabel(form.batch)}
                     </span>
                     .
@@ -280,12 +277,12 @@ export default function Signup() {
             <div>
               <label
                 htmlFor="signup-requiredHours"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-text-primary mb-1"
               >
                 Required Hours{" "}
-                <span className="text-slate-400 font-normal">(optional)</span>
+                <span className="text-text-secondary font-normal">(optional)</span>
               </label>
-              <input
+              <TextInput
                 id="signup-requiredHours"
                 type="number"
                 min="1"
@@ -296,9 +293,8 @@ export default function Signup() {
                 }
                 placeholder="e.g. 486"
                 disabled={submitting}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
               />
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-text-secondary mt-1">
                 Total OJT hours you're required to render. Defaults to 486 if
                 left blank.
               </p>
@@ -318,11 +314,11 @@ export default function Signup() {
             <div>
               <label
                 htmlFor="signup-email"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-text-primary mb-1"
               >
                 Email
               </label>
-              <input
+              <TextInput
                 id="signup-email"
                 type="email"
                 value={form.email}
@@ -331,14 +327,13 @@ export default function Signup() {
                 autoComplete="email"
                 placeholder="you@example.com"
                 disabled={submitting}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
               />
             </div>
 
             <div>
               <label
                 htmlFor="signup-password"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-text-primary mb-1"
               >
                 Password
               </label>
@@ -355,7 +350,7 @@ export default function Signup() {
               {form.password.length > 0 && (
                 <p
                   className={`flex items-center gap-1 text-xs mt-1 ${
-                    passwordLongEnough ? "text-emerald-600" : "text-slate-400"
+                    passwordLongEnough ? "text-success" : "text-text-secondary"
                   }`}
                 >
                   {passwordLongEnough ? (
@@ -371,7 +366,7 @@ export default function Signup() {
             <div>
               <label
                 htmlFor="signup-confirmPassword"
-                className="block text-sm font-medium text-slate-700 mb-1"
+                className="block text-sm font-medium text-text-primary mb-1"
               >
                 Confirm Password
               </label>
@@ -389,7 +384,7 @@ export default function Signup() {
               {form.confirmPassword.length > 0 && (
                 <p
                   className={`flex items-center gap-1 text-xs mt-1 ${
-                    passwordsMatch ? "text-emerald-600" : "text-red-500"
+                    passwordsMatch ? "text-success" : "text-error"
                   }`}
                 >
                   {passwordsMatch ? (
@@ -410,7 +405,7 @@ export default function Signup() {
             <div
               role="alert"
               aria-live="assertive"
-              className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2"
+              className="rounded-lg bg-error-subtle border border-error-border text-error text-sm px-3 py-2"
             >
               {error}
             </div>
@@ -419,7 +414,7 @@ export default function Signup() {
           <button
             type="submit"
             disabled={submitting || passwordsMismatch}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-caap-navy text-white font-medium py-2.5 hover:bg-caap-blue disabled:opacity-50 transition-colors"
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand text-text-inverse font-medium py-2.5 hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? (
               <>
@@ -435,11 +430,11 @@ export default function Signup() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-slate-500 mt-4">
+        <p className="text-center text-sm text-text-secondary mt-4">
           Already have an account?{" "}
           <Link
             to="/login"
-            className="text-caap-blue hover:text-caap-navy font-medium"
+            className="text-text-primary font-medium hover:underline underline-offset-2 transition-colors"
           >
             Log In
           </Link>
@@ -457,7 +452,7 @@ export default function Signup() {
 function FormSection({ title, children }) {
   return (
     <div className="space-y-4">
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide border-b border-slate-100 pb-1.5">
+      <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide border-b border-border pb-1.5">
         {title}
       </p>
       {children}

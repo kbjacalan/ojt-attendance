@@ -1,4 +1,4 @@
-import Select from "./Select";
+import EntitySelect from "./EntitySelect";
 
 export default function AgencySelect({
   id,
@@ -12,17 +12,19 @@ export default function AgencySelect({
   helperText,
 }) {
   return (
-    <Select
+    <EntitySelect
       id={id}
       label={label}
       value={value}
       onChange={onChange}
+      items={agencies}
+      getOptionValue={(a) => a.id}
+      getOptionLabel={(a) => a.name}
       required={required}
       disabled={disabled}
-      size={variant === "spacious" ? "md" : "sm"}
-      helperText={helperText}
+      variant={variant}
       placeholder={required ? "Select an agency" : "Unassigned"}
-      options={agencies.map((a) => ({ value: a.id, label: a.name }))}
+      helperText={helperText}
     />
   );
 }

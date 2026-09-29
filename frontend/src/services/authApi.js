@@ -1,20 +1,10 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api";
+import { publicRequest, request } from "./http";
 
 export async function loginRequest(email, password) {
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+  return publicRequest("/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.error || "Login failed. Please try again.");
-  }
-
-  return data; // { token, user }
 }
 
 export async function signupRequest({
@@ -32,9 +22,8 @@ export async function signupRequest({
   pmEnd,
   controlNumberId,
 }) {
-  const res = await fetch(`${API_BASE_URL}/auth/signup`, {
+  return publicRequest("/auth/signup", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       fullName,
       email,
@@ -51,14 +40,6 @@ export async function signupRequest({
       controlNumberId,
     }),
   });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.error || "Sign up failed. Please try again.");
-  }
-
-  return data; // { message, email }
 }
 
 /**
@@ -67,14 +48,7 @@ export async function signupRequest({
  * login token and only returns the minimal id/name fields.
  */
 export async function listPublicAgencies() {
-  const res = await fetch(`${API_BASE_URL}/agencies/public`);
-  const data = await res.json().catch(() => []);
-
-  if (!res.ok) {
-    throw new Error(data.error || "Failed to load agencies.");
-  }
-
-  return data; // [{ id, name }]
+  return publicRequest("/agencies/public");
 }
 
 /**
@@ -82,14 +56,7 @@ export async function listPublicAgencies() {
  * another student, for the signup page's OJT Control Number dropdown.
  */
 export async function listPublicControlNumbers() {
-  const res = await fetch(`${API_BASE_URL}/control-numbers/public`);
-  const data = await res.json().catch(() => []);
-
-  if (!res.ok) {
-    throw new Error(data.error || "Failed to load control numbers.");
-  }
-
-  return data; // [{ id, control_number }]
+  return publicRequest("/control-numbers/public");
 }
 
 /**
@@ -98,24 +65,10 @@ export async function listPublicControlNumbers() {
  * changePasswordRequest below.
  */
 export async function updateProfileRequest(fullName) {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+  return request("/auth/profile", {
     method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
     body: JSON.stringify({ fullName }),
   });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.error || "Failed to update profile.");
-  }
-
-  return data; // { user }
 }
 
 /**
@@ -125,22 +78,8 @@ export async function updateProfileRequest(fullName) {
  * adminApi/inchargeApi do.
  */
 export async function changePasswordRequest(currentPassword, newPassword) {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+  return request("/auth/change-password", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
     body: JSON.stringify({ currentPassword, newPassword }),
   });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    throw new Error(data.error || "Failed to change password.");
-  }
-
-  return data; // { message }
 }

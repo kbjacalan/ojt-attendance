@@ -14,32 +14,11 @@ import { getStudentDTR, correctAttendance } from "../../services/adminApi";
 import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
 import bagongPilipinasLogo from "../../assets/bagong_pilipinas_logo.png";
-import { getManilaMonthString } from "../../utils/manilaDate";
-
-function to12HourNoSuffix(time24) {
-  if (!time24) return "";
-  const [hStr, mStr] = time24.split(":");
-  let h = parseInt(hStr, 10);
-  const m = mStr || "00";
-  h = h % 12;
-  if (h === 0) h = 12;
-  return `${h}:${m}`;
-}
-
-function to12Hour(time24) {
-  if (!time24) return "";
-  const [hStr, mStr] = time24.split(":");
-  let h = parseInt(hStr, 10);
-  const m = mStr || "00";
-  const period = h >= 12 ? "PM" : "AM";
-  h = h % 12;
-  if (h === 0) h = 12;
-  return `${h}:${m} ${period}`;
-}
-
-function getCurrentMonthValue() {
-  return getManilaMonthString();
-}
+import { to12Hour, to12HourNoSuffix } from "../../utils/formatTime";
+import { getCurrentMonthValue, shiftMonthValue } from "../../utils/month";
+import RemarksModal from "../../components/dtr/DTRRemarksModal";
+import TextInput from "../../components/common/TextInput";
+import TextArea from "../../components/common/TextArea";
 
 export default function StudentDTRReview() {
   const { studentId } = useParams();
@@ -82,16 +61,13 @@ export default function StudentDTRReview() {
   }
 
   function shiftMonth(delta) {
-    const [year, mo] = month.split("-").map(Number);
-    const newDate = new Date(year, mo - 1 + delta, 1);
-    const newMonth = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, "0")}`;
-    setMonth(newMonth);
+    setMonth(shiftMonthValue(month, delta));
   }
 
   const isCertified = dtr?.certification?.status === "certified";
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 px-4 print:p-0">
+    <div className="min-h-screen bg-bg-secondary py-8 px-4 print:p-0">
       <div className="max-w-3xl mx-auto mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <BackButton fallbackTo="/admin/students" label="Back to Students" />
 
@@ -99,16 +75,16 @@ export default function StudentDTRReview() {
           <div className="flex items-center gap-1">
             <button
               onClick={() => shiftMonth(-1)}
-              className="p-1.5 rounded hover:bg-slate-200"
+              className="p-1.5 rounded hover:bg-bg-secondary"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-medium text-slate-700 min-w-[90px] sm:min-w-[110px] text-center">
+            <span className="text-sm font-medium text-text-primary min-w-[90px] sm:min-w-[110px] text-center">
               {dtr?.student?.month || month}
             </span>
             <button
               onClick={() => shiftMonth(1)}
-              className="p-1.5 rounded hover:bg-slate-200"
+              className="p-1.5 rounded hover:bg-bg-secondary"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -117,7 +93,7 @@ export default function StudentDTRReview() {
           <button
             onClick={() => window.print()}
             disabled={!dtr}
-            className="flex items-center gap-2 bg-caap-navy text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue disabled:opacity-50 sm:ml-3"
+            className="flex items-center gap-2 bg-brand text-text-inverse px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3"
           >
             <Printer className="w-4 h-4" /> Print
           </button>
@@ -125,35 +101,35 @@ export default function StudentDTRReview() {
       </div>
 
       {loading && (
-        <div className="flex justify-center py-16 text-slate-400">
+        <div className="flex justify-center py-16 text-text-secondary">
           <LoaderCircle className="w-6 h-6 animate-spin" />
         </div>
       )}
 
       {error && (
-        <div className="max-w-3xl mx-auto rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+        <div className="max-w-3xl mx-auto rounded-lg bg-error-subtle border border-error-border text-error text-sm px-4 py-3">
           {error}
         </div>
       )}
 
       {!loading && dtr && (
         <ResponsiveDocument className="max-w-3xl mx-auto">
-          <div className="bg-white shadow-sm border border-slate-200 rounded-lg p-8 print:p-0 print:shadow-none print:border-none">
+          <div className="bg-bg-primary shadow-sm border border-border rounded-lg p-8 print:p-0 print:shadow-none print:border-none">
             {isCertified ? (
-              <div className="mb-4 flex items-center gap-2 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-3 py-2 print:hidden">
+              <div className="mb-4 flex items-center gap-2 text-sm bg-success-subtle text-success border border-success-border rounded-lg px-3 py-2 print:hidden">
                 <CheckCircle2 className="w-4 h-4" />
                 Certified on{" "}
                 {new Date(dtr.certification.certifiedAt).toLocaleString(
                   "en-PH",
                   { timeZone: "Asia/Manila" },
                 )}
-                <span className="ml-1 text-emerald-600/80 flex items-center gap-1">
+                <span className="ml-1 text-success/80 flex items-center gap-1">
                   <Lock className="w-3 h-3" /> Only the assigned in-charge can
                   uncertify this month.
                 </span>
               </div>
             ) : (
-              <p className="text-xs text-slate-400 mb-3 print:hidden">
+              <p className="text-xs text-text-secondary mb-3 print:hidden">
                 Click any day row below to correct times or add a remark.
                 Certification is managed by the assigned in-charge.
               </p>
@@ -341,13 +317,13 @@ export default function StudentDTRReview() {
 
 function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
   const cellClass = "border border-slate-800 px-1 py-0.5 text-center";
-  const clickable = editable ? "cursor-pointer hover:bg-slate-100" : "";
+  const clickable = editable ? "cursor-pointer hover:bg-bg-secondary" : "";
 
   if (row.status === "weekend") {
     return (
       <tr className={clickable} onClick={editable ? onEdit : undefined}>
         <td className={cellClass}>{row.day}</td>
-        <td colSpan={6} className={`${cellClass} text-slate-400 italic`}>
+        <td colSpan={6} className={`${cellClass} text-text-secondary italic`}>
           — Weekend —
         </td>
         <td className={cellClass}></td>
@@ -359,7 +335,7 @@ function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
   if (row.status === "holiday") {
     return (
       <tr
-        className={`bg-slate-50 ${clickable}`}
+        className={`bg-bg-secondary ${clickable}`}
         onClick={editable ? onEdit : undefined}
       >
         <td className={cellClass}>{row.day}</td>
@@ -405,11 +381,11 @@ function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
   }
 
   // present — highlight empty time cells red on screen only (incomplete day cue)
-  const missingCell = "bg-red-100 print:bg-transparent";
+  const missingCell = "bg-error-subtle print:bg-transparent";
   const otIncomplete = Boolean(row.otIn) !== Boolean(row.otOut);
   return (
     <tr
-      className={`${row.isHolidayWorked ? "bg-amber-50" : ""} ${clickable}`}
+      className={`${row.isHolidayWorked ? "bg-warning-subtle" : ""} ${clickable}`}
       onClick={editable ? onEdit : undefined}
     >
       <td className={cellClass}>
@@ -431,7 +407,7 @@ function DTRRow({ row, editable, signature, onEdit, onViewRemarks }) {
             className="block mx-auto mt-0.5 print:hidden"
             title="View remarks"
           >
-            <MessageSquare className="w-3 h-3 text-caap-blue" />
+            <MessageSquare className="w-3 h-3 text-text-primary" />
           </button>
         )}
       </td>
@@ -530,12 +506,12 @@ function CorrectionModal({ day, month, studentId, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50 print:hidden">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h2 className="font-semibold text-slate-800 mb-1">
+    <div className="fixed inset-0 bg-overlay flex items-center justify-center px-4 z-50 print:hidden">
+      <div className="bg-bg-primary rounded-2xl shadow-xl w-full max-w-md p-6">
+        <h2 className="font-semibold text-text-primary mb-1">
           Correct Attendance — Day {day.day}
         </h2>
-        <p className="text-xs text-slate-500 mb-4">{dateStr}</p>
+        <p className="text-xs text-text-secondary mb-4">{dateStr}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -572,32 +548,31 @@ function CorrectionModal({ day, month, studentId, onClose, onSaved }) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">
+            <label className="block text-xs font-medium text-text-secondary mb-1">
               Reason for correction (required)
             </label>
-            <textarea
+            <TextArea
               value={form.remarks}
               onChange={(e) => setForm({ ...form, remarks: e.target.value })}
               rows={3}
               placeholder="e.g. Student forgot to time out; confirmed with supervisor."
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
             />
           </div>
 
-          {error && <div className="text-sm text-red-600">{error}</div>}
+          {error && <div className="text-sm text-error">{error}</div>}
 
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={submitting}
-              className="bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue disabled:opacity-50"
+              className="bg-brand text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? "Saving…" : "Save Correction"}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
+              className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary"
             >
               Cancel
             </button>
@@ -611,60 +586,14 @@ function CorrectionModal({ day, month, studentId, onClose, onSaved }) {
 function TimeField({ label, value, onChange }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-600 mb-1">
+      <label className="block text-xs font-medium text-text-secondary mb-1">
         {label}
       </label>
-      <input
+      <TextInput
         type="time"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
       />
-    </div>
-  );
-}
-
-/**
- * Read-only modal showing the full remarks history for a day.
- * Corrections append rather than overwrite (see attendanceService.js),
- * so this can show multiple stacked entries separated by newlines.
- */
-function RemarksModal({ day, month, onClose }) {
-  const dateStr = `${month}-${String(day.day).padStart(2, "0")}`;
-  const entries = (day.remarks || "").split("\n").filter(Boolean);
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50 print:hidden">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h2 className="font-semibold text-slate-800 mb-1">
-          Remarks — Day {day.day}
-        </h2>
-        <p className="text-xs text-slate-500 mb-4">{dateStr}</p>
-
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {entries.length > 0 ? (
-            entries.map((line, i) => (
-              <div
-                key={i}
-                className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2"
-              >
-                {line}
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-slate-400">
-              No remarks recorded for this day.
-            </p>
-          )}
-        </div>
-
-        <button
-          onClick={onClose}
-          className="mt-4 w-full px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 border border-slate-200"
-        >
-          Close
-        </button>
-      </div>
     </div>
   );
 }

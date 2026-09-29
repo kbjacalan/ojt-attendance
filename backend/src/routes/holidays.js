@@ -1,72 +1,61 @@
 const express = require("express");
 const router = express.Router();
 const { authenticate, requireRole } = require("../middleware/authenticate");
+const { asyncHandler } = require("../middleware/errorHandler");
 const {
   listHolidays,
   createHoliday,
   updateHoliday,
   deleteHoliday,
-  HolidayError,
 } = require("../services/holidayService");
+const { isDateString } = require("../utils/validators");
 
 router.use(authenticate, requireRole("admin"));
 
 // GET /api/holidays?year=2026
-router.get("/", async (req, res) => {
-  try {
+router.get(
+  "/",
+  asyncHandler(async (req, res) => {
     const holidays = await listHolidays(req.query.year);
     res.json(holidays);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
 // POST /api/holidays  { holidayDate: 'YYYY-MM-DD', name, isNational }
-router.post("/", async (req, res) => {
-  const { holidayDate, name, isNational } = req.body;
-  if (!holidayDate || !name) {
-    return res
-      .status(400)
-      .json({ error: "holidayDate and name are required." });
-  }
-  try {
+router.post(
+  "/",
+  asyncHandler(async (req, res) => {
+    const { holidayDate, name, isNational } = req.body;
+    if (!holidayDate || !name) {
+      return res
+        .status(400)
+        .json({ error: "holidayDate and name are required." });
+    }
     const holiday = await createHoliday({ holidayDate, name, isNational });
     res.status(201).json(holiday);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.put("/:id", async (req, res) => {
-  const { holidayDate } = req.body;
-  if (holidayDate !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(holidayDate)) {
-    return res
-      .status(400)
-      .json({ error: "holidayDate must be in YYYY-MM-DD format." });
-  }
-  try {
+router.put(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const { holidayDate } = req.body;
+    if (holidayDate !== undefined && !isDateString(holidayDate)) {
+      return res
+        .status(400)
+        .json({ error: "holidayDate must be in YYYY-MM-DD format." });
+    }
     const holiday = await updateHoliday(req.params.id, req.body);
     res.json(holiday);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.delete("/:id", async (req, res) => {
-  try {
+router.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
     await deleteHoliday(req.params.id);
     res.status(204).send();
-  } catch (err) {
-    handleError(err, res);
-  }
-});
-
-function handleError(err, res) {
-  if (err instanceof HolidayError) {
-    return res.status(err.statusCode).json({ error: err.message });
-  }
-  console.error(err);
-  res.status(500).json({ error: "Internal server error." });
-}
+  }),
+);
 
 module.exports = router;

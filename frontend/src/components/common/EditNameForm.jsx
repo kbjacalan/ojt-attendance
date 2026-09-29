@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, UserPen, LoaderCircle } from "lucide-react";
 import { updateProfileRequest } from "../../services/authApi";
 import { useAuth } from "../../context/AuthContext";
+import TextInput from "./TextInput";
 
 const MIN_NAME_LENGTH = 2;
 
@@ -53,11 +54,11 @@ export default function EditNameForm() {
       <div>
         <label
           htmlFor="en-full-name"
-          className="block text-sm font-medium text-slate-700 mb-1"
+          className="block text-sm font-medium text-text-primary mb-1"
         >
           Full Name
         </label>
-        <input
+        <TextInput
           id="en-full-name"
           type="text"
           value={fullName}
@@ -67,7 +68,6 @@ export default function EditNameForm() {
           autoComplete="name"
           placeholder="Enter your full name"
           disabled={submitting}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:opacity-50"
         />
       </div>
 
@@ -75,7 +75,7 @@ export default function EditNameForm() {
         <div
           role="alert"
           aria-live="assertive"
-          className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2"
+          className="rounded-lg bg-error-subtle border border-error-border text-error text-sm px-3 py-2"
         >
           {error}
         </div>
@@ -84,7 +84,7 @@ export default function EditNameForm() {
       {success && (
         <div
           role="status"
-          className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-3 py-2"
+          className="flex items-center gap-2 rounded-lg bg-success-subtle border border-success-border text-success text-sm px-3 py-2"
         >
           <Check className="w-4 h-4 shrink-0" />
           Name updated successfully.
@@ -94,7 +94,7 @@ export default function EditNameForm() {
       <button
         type="submit"
         disabled={submitting || isUnchanged || trimmedName.length === 0}
-        className="w-full flex items-center justify-center gap-2 rounded-lg bg-caap-navy text-white font-medium py-2.5 hover:bg-caap-blue disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand text-text-inverse font-medium py-2.5 hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {submitting ? (
           <>

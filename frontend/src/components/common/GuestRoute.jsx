@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { getHomeRouteForRole } from "../../utils/roleRoutes";
+import AuthLoading from "./AuthLoading";
 
 /**
  * Wraps a page that should only be reachable while signed out (Login, Sign
@@ -19,11 +20,7 @@ export default function GuestRoute({ children }) {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500 text-sm">
-        Loading…
-      </div>
-    );
+    return <AuthLoading />;
   }
 
   if (user) {

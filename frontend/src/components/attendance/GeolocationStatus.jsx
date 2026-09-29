@@ -1,32 +1,48 @@
-import {
-  MapPin,
-  LoaderCircle,
-  CheckCircle2,
-  AlertTriangle,
-} from "lucide-react";
+import { LoaderCircle, AlertTriangle } from "lucide-react";
+
+const TONE_CLASSES = {
+  info: "bg-info-subtle text-info border-info-border",
+  danger: "bg-error-subtle text-error border-error-border",
+};
+
+function StatusPill({
+  tone,
+  icon: Icon,
+  spin = false,
+  className = "",
+  role,
+  ariaLive,
+  children,
+}) {
+  return (
+    <div
+      className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${TONE_CLASSES[tone]} ${className}`}
+      role={role}
+      aria-live={ariaLive}
+    >
+      <Icon className={`w-4 h-4 shrink-0 ${spin ? "animate-spin" : ""}`} />
+      <span>{children}</span>
+    </div>
+  );
+}
 
 /**
- * Displays the current geolocation status as a small badge.
- * Driven by the `status`/`error` values returned from the
- * one-shot useGeolocation hook (always a fresh, uncached fix —
- * that part is non-negotiable for an actual Time In/Out submit).
+ * Shows geolocation feedback only while it needs the student's
+ * attention: while a fresh fix is being fetched for a Time In/Out
+ * submit, or when that fix fails. Driven by the `status`/`error`
+ * values from the one-shot useGeolocation hook. The idle and success
+ * states render nothing, because being out of range is already
+ * surfaced by the parent's `disabledReason` and a successful punch is
+ * confirmed by its own result message.
  *
- * `liveGeofence` (optional): the geofence reading already computed
- * from the continuously-watched position shown on the map above this
- * card ({ withinRadius, distanceMeters } | null). This is NOT used to
- * decide whether a punch is allowed — the server always re-checks a
- * fresh fix — it's purely so this badge doesn't lie by omission and
- * claim "not checked yet" when the student can plainly see their dot
- * on the map. Seeding 'idle' and 'locating' with it means pressing
- * Time In/Out reads as "confirming what we already showed you" rather
- * than a reset back to a blank, unknown state.
+ * `liveGeofence` (optional) is the reading already computed from the
+ * watched position on the map; it only changes the wording while
+ * locating, so pressing Time In/Out reads as confirming what the map
+ * already showed.
  *
- * Wrapped in an aria-live region so a screen reader announces status
- * changes (e.g. "Getting your location…" -> "Location found") as they
- * happen, without the student needing to re-focus this element.
+ * Wrapped in aria-live so a screen reader announces changes.
  *
- * `className` (optional) lets the caller add spacing/layout utilities
- * (e.g. margin) without this component needing to guess its context.
+ * `className` (optional) lets the caller add spacing utilities.
  */
 export default function GeolocationStatus({
   status,
@@ -34,71 +50,33 @@ export default function GeolocationStatus({
   liveGeofence = null,
   className = "",
 }) {
-  if (status === "idle") {
-    if (liveGeofence) {
-      return (
-        <div
-          className={`flex items-center gap-2 text-sm ${
-            liveGeofence.withinRadius ? "text-emerald-600" : "text-amber-600"
-          } ${className}`}
-          aria-live="polite"
-        >
-          <MapPin className="w-4 h-4" />
-          <span>
-            {liveGeofence.withinRadius
-              ? "Last seen inside the geofence"
-              : `Last seen ${liveGeofence.distanceMeters}m away`}
-          </span>
-        </div>
-      );
-    }
-    return (
-      <div
-        className={`flex items-center gap-2 text-sm text-slate-500 ${className}`}
-        aria-live="polite"
-      >
-        <MapPin className="w-4 h-4" />
-        <span>Location not checked yet</span>
-      </div>
-    );
-  }
+  if (status === "idle" || status === "success") return null;
 
   if (status === "locating") {
     return (
-      <div
-        className={`flex items-center gap-2 text-sm text-blue-600 ${className}`}
-        aria-live="polite"
+      <StatusPill
+        tone="info"
+        icon={LoaderCircle}
+        spin
+        className={className}
+        ariaLive="polite"
       >
-        <LoaderCircle className="w-4 h-4 animate-spin" />
-        <span>
-          {liveGeofence
-            ? "Confirming your exact location…"
-            : "Getting your location…"}
-        </span>
-      </div>
-    );
-  }
-
-  if (status === "success") {
-    return (
-      <div
-        className={`flex items-center gap-2 text-sm text-emerald-600 ${className}`}
-        aria-live="polite"
-      >
-        <CheckCircle2 className="w-4 h-4" />
-        <span>Location confirmed</span>
-      </div>
+        {liveGeofence
+          ? "Confirming your exact location…"
+          : "Getting your location…"}
+      </StatusPill>
     );
   }
 
   return (
-    <div
-      className={`flex items-center gap-2 text-sm text-red-600 ${className}`}
+    <StatusPill
+      tone="danger"
+      icon={AlertTriangle}
+      className={className}
       role="alert"
-      aria-live="assertive"
+      ariaLive="assertive"
     >
-      <AlertTriangle className="w-4 h-4" />
-      <span>{error || "Unable to get your location."}</span>
-    </div>
+      {error || "Unable to get your location."}
+    </StatusPill>
   );
 }

@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { getHomeRouteForRole } from "../../utils/roleRoutes";
+import AuthLoading from "./AuthLoading";
 
 /**
  * Used for "/" and unmatched paths. Sends signed-in users straight to
@@ -12,11 +13,7 @@ export default function RootRedirect() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500 text-sm">
-        Loading…
-      </div>
-    );
+    return <AuthLoading />;
   }
 
   return (

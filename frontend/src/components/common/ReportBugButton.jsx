@@ -37,7 +37,7 @@ export default function ReportBugButton() {
         window.open(BUG_REPORT_URL, "_blank", "noopener,noreferrer")
       }
       aria-label="Report a bug"
-      className={`group fixed bottom-5 right-5 z-50 flex h-12 items-center overflow-hidden rounded-full bg-caap-blue text-white shadow-lg shadow-black/10 transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-caap-navy hover:shadow-xl active:scale-95 ${
+      className={`group fixed bottom-5 right-5 z-50 flex h-12 items-center overflow-hidden rounded-full bg-brand text-text-inverse shadow-lg shadow-black/10 transition-all duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-brand-hover disabled:hover:bg-brand hover:shadow-xl active:scale-95 ${
         expanded ? "max-w-50 px-4" : "max-w-12 px-3.5"
       }`}
     >

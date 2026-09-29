@@ -162,17 +162,24 @@ function requirePriorPeriodsComplete(period, log) {
   for (let i = 0; i < index; i++) {
     const priorPeriod = SELECTABLE_PERIODS[i];
     const priorCols = PERIOD_COLUMNS[priorPeriod];
-    if (!log[priorCols.in] || !log[priorCols.out]) {
+    const priorOpenSession = log[priorCols.in] && !log[priorCols.out];
+    if (priorOpenSession) {
       throw new AttendanceError(
-        `Please complete your ${priorPeriod} shift (time in and time out) before starting the ${period} shift.`,
+        `You still have an open ${priorPeriod} session. Please time out for ${priorPeriod} before starting the ${period} shift.`,
         409,
-        "PRIOR_PERIOD_INCOMPLETE",
+        "PRIOR_PERIOD_OPEN",
       );
     }
   }
 }
 
-async function timeIn({ studentId, latitude, longitude, period }) {
+async function resolvePunchContext({
+  studentId,
+  latitude,
+  longitude,
+  period,
+  action,
+}) {
   if (!SELECTABLE_PERIODS.includes(period)) {
     throw new AttendanceError(
       "period must be 'morning' (AM), 'afternoon' (PM), or 'overtime' (OT).",
@@ -192,14 +199,55 @@ async function timeIn({ studentId, latitude, longitude, period }) {
   );
 
   if (!withinRadius) {
+    const verb = action === "out" ? "time out" : "time in";
     throw new AttendanceError(
-      `You are ${distanceMeters}m away from ${agency.name}. You must be within ${agency.radius_meters}m to time in.`,
+      `You are ${distanceMeters}m away from ${agency.name}. You must be within ${agency.radius_meters}m to ${verb}.`,
       403,
     );
   }
 
   const log = await getOrCreateTodayLog(studentId, agency.agency_id);
   const cols = PERIOD_COLUMNS[period];
+  return { agency, log, cols, distanceMeters };
+}
+
+async function persistPunch({
+  logId,
+  column,
+  latColumn,
+  lngColumn,
+  latitude,
+  longitude,
+}) {
+  const now = new Date();
+  const setClauses = [`${column} = $1`];
+  const values = [now];
+  let paramIndex = 2;
+
+  if (latColumn && lngColumn) {
+    setClauses.push(`${latColumn} = $${paramIndex++}`, `${lngColumn} = $${paramIndex++}`);
+    values.push(latitude, longitude);
+  }
+
+  values.push(logId);
+
+  const { rows } = await pool.query(
+    `UPDATE attendance_logs SET ${setClauses.join(", ")}, updated_at = now()
+     WHERE id = $${paramIndex}
+     RETURNING *`,
+    values,
+  );
+  return rows;
+}
+
+async function timeIn({ studentId, latitude, longitude, period }) {
+  const { agency, log, cols, distanceMeters } = await resolvePunchContext({
+    studentId,
+    latitude,
+    longitude,
+    period,
+    action: "in",
+  });
 
   if (log[cols.in]) {
     throw new AttendanceError(
@@ -210,59 +258,26 @@ async function timeIn({ studentId, latitude, longitude, period }) {
 
   requirePriorPeriodsComplete(period, log);
 
-  const now = new Date();
-  const setClauses = [`${cols.in} = $1`];
-  const values = [now];
-  let paramIndex = 2;
-
-  if (cols.inLat) {
-    setClauses.push(
-      `${cols.inLat} = $${paramIndex++}`,
-      `${cols.inLng} = $${paramIndex++}`,
-    );
-    values.push(latitude, longitude);
-  }
-
-  values.push(log.id);
-
-  const { rows } = await pool.query(
-    `UPDATE attendance_logs SET ${setClauses.join(", ")}, updated_at = now()
-     WHERE id = $${paramIndex}
-     RETURNING *`,
-    values,
-  );
+  const rows = await persistPunch({
+    logId: log.id,
+    column: cols.in,
+    latColumn: cols.inLat,
+    lngColumn: cols.inLng,
+    latitude,
+    longitude,
+  });
 
   return { period, distanceMeters, log: rows[0] };
 }
 
 async function timeOut({ studentId, latitude, longitude, period }) {
-  if (!SELECTABLE_PERIODS.includes(period)) {
-    throw new AttendanceError(
-      "period must be 'morning' (AM), 'afternoon' (PM), or 'overtime' (OT).",
-      400,
-    );
-  }
-
-  const agency = await getStudentAgency(studentId);
-  await resolveScheduleForPeriod(period, agency, studentId);
-
-  const { withinRadius, distanceMeters } = isWithinGeofence(
+  const { log, cols, distanceMeters } = await resolvePunchContext({
+    studentId,
     latitude,
     longitude,
-    agency.latitude,
-    agency.longitude,
-    agency.radius_meters,
-  );
-
-  if (!withinRadius) {
-    throw new AttendanceError(
-      `You are ${distanceMeters}m away from ${agency.name}. You must be within ${agency.radius_meters}m to time out.`,
-      403,
-    );
-  }
-
-  const log = await getOrCreateTodayLog(studentId, agency.agency_id);
-  const cols = PERIOD_COLUMNS[period];
+    period,
+    action: "out",
+  });
 
   if (!log[cols.in]) {
     throw new AttendanceError(
@@ -277,27 +292,14 @@ async function timeOut({ studentId, latitude, longitude, period }) {
     );
   }
 
-  const now = new Date();
-  const setClauses = [`${cols.out} = $1`];
-  const values = [now];
-  let paramIndex = 2;
-
-  if (cols.outLat) {
-    setClauses.push(
-      `${cols.outLat} = $${paramIndex++}`,
-      `${cols.outLng} = $${paramIndex++}`,
-    );
-    values.push(latitude, longitude);
-  }
-
-  values.push(log.id);
-
-  const { rows } = await pool.query(
-    `UPDATE attendance_logs SET ${setClauses.join(", ")}, updated_at = now()
-     WHERE id = $${paramIndex}
-     RETURNING *`,
-    values,
-  );
+  const rows = await persistPunch({
+    logId: log.id,
+    column: cols.out,
+    latColumn: cols.outLat,
+    lngColumn: cols.outLng,
+    latitude,
+    longitude,
+  });
 
   const updatedLog = rows[0];
   const totalHours = computeTotalHours(updatedLog);
@@ -333,9 +335,7 @@ function manilaTimeToDate(dateStr, timeStr) {
 
 function buildConsistencyWarnings(updatedTimes) {
   const warnings = [];
-  const amComplete = Boolean(
-    updatedTimes.am_time_in && updatedTimes.am_time_out,
-  );
+  const amOpen = Boolean(updatedTimes.am_time_in) && !updatedTimes.am_time_out;
   const pmComplete = Boolean(
     updatedTimes.pm_time_in && updatedTimes.pm_time_out,
   );
@@ -346,14 +346,19 @@ function buildConsistencyWarnings(updatedTimes) {
     updatedTimes.ot_time_in || updatedTimes.ot_time_out,
   );
 
-  if (hasPmPunch && !amComplete) {
+  if (hasPmPunch && amOpen) {
     warnings.push(
-      "This record has an afternoon (PM) punch, but the morning (AM) shift isn't complete for this day.",
+      "This record has an afternoon (PM) punch, but the morning (AM) session was started and never timed out.",
     );
   }
-  if (hasOtPunch && !(amComplete && pmComplete)) {
+  if (hasOtPunch && amOpen) {
     warnings.push(
-      "This record has an overtime (OT) punch, but the AM/PM shift isn't complete for this day.",
+      "This record has an overtime (OT) punch, but the morning (AM) session was started and never timed out.",
+    );
+  }
+  if (hasOtPunch && !pmComplete) {
+    warnings.push(
+      "This record has an overtime (OT) punch, but the afternoon (PM) shift isn't complete for this day.",
     );
   }
   return warnings;

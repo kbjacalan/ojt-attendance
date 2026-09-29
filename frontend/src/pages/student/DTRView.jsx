@@ -11,34 +11,12 @@ import { getMyDTR } from "../../services/dtrApi";
 import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
 import bagongPilipinasLogo from "../../assets/bagong_pilipinas_logo.png";
-import { getManilaMonthString } from "../../utils/manilaDate";
-
-/** Converts "HH:MM" 24-hour string to "h:mm" without AM/PM (for Morning/Afternoon columns). */
-function to12HourNoSuffix(time24) {
-  if (!time24) return "";
-  const [hStr, mStr] = time24.split(":");
-  let h = parseInt(hStr, 10);
-  const m = mStr || "00";
-  h = h % 12;
-  if (h === 0) h = 12;
-  return `${h}:${m}`;
-}
-
-/** Converts "HH:MM" 24-hour string to "h:mm AM/PM" (for Overtime column). */
-function to12Hour(time24) {
-  if (!time24) return "";
-  const [hStr, mStr] = time24.split(":");
-  let h = parseInt(hStr, 10);
-  const m = mStr || "00";
-  const period = h >= 12 ? "PM" : "AM";
-  h = h % 12;
-  if (h === 0) h = 12;
-  return `${h}:${m} ${period}`;
-}
-
-function getCurrentMonthValue() {
-  return getManilaMonthString();
-}
+import { to12Hour, to12HourNoSuffix } from "../../utils/formatTime";
+import {
+  getCurrentMonthValue,
+  shiftMonthValue,
+} from "../../utils/month";
+import RemarksModal from "../../components/dtr/DTRRemarksModal";
 
 export default function DTRView() {
   const [month, setMonth] = useState(getCurrentMonthValue());
@@ -65,15 +43,11 @@ export default function DTRView() {
   }
 
   function shiftMonth(delta) {
-    const [year, mo] = month.split("-").map(Number);
-    const newDate = new Date(year, mo - 1 + delta, 1);
-    setMonth(
-      `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, "0")}`,
-    );
+    setMonth(shiftMonthValue(month, delta));
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 px-4 print:p-0">
+    <div className="min-h-screen bg-bg-secondary py-8 px-4 print:p-0">
       {/* Toolbar — hidden when printing */}
       <div className="max-w-3xl mx-auto mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <BackButton fallbackTo="/attendance" label="Back to Attendance" />
@@ -82,16 +56,16 @@ export default function DTRView() {
           <div className="flex items-center gap-1">
             <button
               onClick={() => shiftMonth(-1)}
-              className="p-1.5 rounded hover:bg-slate-200"
+              className="p-1.5 rounded hover:bg-bg-secondary"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-medium text-slate-700 min-w-[90px] sm:min-w-[110px] text-center">
+            <span className="text-sm font-medium text-text-primary min-w-[90px] sm:min-w-[110px] text-center">
               {dtr?.student?.month || month}
             </span>
             <button
               onClick={() => shiftMonth(1)}
-              className="p-1.5 rounded hover:bg-slate-200"
+              className="p-1.5 rounded hover:bg-bg-secondary"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -100,7 +74,7 @@ export default function DTRView() {
           <button
             onClick={() => window.print()}
             disabled={!dtr}
-            className="flex items-center gap-2 bg-caap-navy text-white px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue disabled:opacity-50 sm:ml-3"
+            className="flex items-center gap-2 bg-brand text-text-inverse px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3"
           >
             <Printer className="w-4 h-4" /> Print
           </button>
@@ -108,20 +82,20 @@ export default function DTRView() {
       </div>
 
       {loading && (
-        <div className="flex justify-center py-16 text-slate-400">
+        <div className="flex justify-center py-16 text-text-secondary">
           <LoaderCircle className="w-6 h-6 animate-spin" />
         </div>
       )}
 
       {error && (
-        <div className="max-w-3xl mx-auto rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+        <div className="max-w-3xl mx-auto rounded-lg bg-error-subtle border border-error-border text-error text-sm px-4 py-3">
           {error}
         </div>
       )}
 
       {!loading && dtr && (
         <ResponsiveDocument className="max-w-3xl mx-auto">
-          <div className="bg-white shadow-sm border border-slate-200 rounded-lg p-8 print:p-0 print:shadow-none print:border-none">
+          <div className="bg-bg-primary shadow-sm border border-border rounded-lg p-8 print:p-0 print:shadow-none print:border-none">
             {/* Header */}
             <div className="flex flex-col items-center mb-2">
               <div className="flex items-center justify-center gap-3">
@@ -299,7 +273,7 @@ function DTRRow({ row, signature, onViewRemarks }) {
     return (
       <tr>
         <td className={cellClass}>{row.day}</td>
-        <td colSpan={6} className={`${cellClass} text-slate-400 italic`}>
+        <td colSpan={6} className={`${cellClass} text-text-secondary italic`}>
           — Weekend —
         </td>
         <td className={cellClass}></td>
@@ -310,7 +284,7 @@ function DTRRow({ row, signature, onViewRemarks }) {
 
   if (row.status === "holiday") {
     return (
-      <tr className="bg-slate-50">
+      <tr className="bg-bg-secondary">
         <td className={cellClass}>{row.day}</td>
         <td colSpan={6} className={`${cellClass} italic`}>
           {row.label || "Holiday"}
@@ -354,10 +328,10 @@ function DTRRow({ row, signature, onViewRemarks }) {
   }
 
   // present — highlight empty time cells red on screen only (incomplete day cue)
-  const missingCell = "bg-red-100 print:bg-transparent";
+  const missingCell = "bg-error-subtle print:bg-transparent";
   const otIncomplete = Boolean(row.otIn) !== Boolean(row.otOut);
   return (
-    <tr className={row.isHolidayWorked ? "bg-amber-50" : ""}>
+    <tr className={row.isHolidayWorked ? "bg-warning-subtle" : ""}>
       <td className={cellClass}>
         {row.day}
         {row.isHolidayWorked && (
@@ -374,7 +348,7 @@ function DTRRow({ row, signature, onViewRemarks }) {
             className="block mx-auto mt-0.5 print:hidden"
             title="View remarks"
           >
-            <MessageSquare className="w-3 h-3 text-caap-blue" />
+            <MessageSquare className="w-3 h-3 text-text-primary" />
           </button>
         )}
       </td>
@@ -414,49 +388,5 @@ function DTRRow({ row, signature, onViewRemarks }) {
         ) : null}
       </td>
     </tr>
-  );
-}
-
-/**
- * Read-only modal showing the full remarks history for a day —
- * lets a student see why an in-charge or admin corrected their record.
- */
-function RemarksModal({ day, month, onClose }) {
-  const dateStr = `${month}-${String(day.day).padStart(2, "0")}`;
-  const entries = (day.remarks || "").split("\n").filter(Boolean);
-
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50 print:hidden">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        <h2 className="font-semibold text-slate-800 mb-1">
-          Remarks — Day {day.day}
-        </h2>
-        <p className="text-xs text-slate-500 mb-4">{dateStr}</p>
-
-        <div className="space-y-2 max-h-64 overflow-y-auto">
-          {entries.length > 0 ? (
-            entries.map((line, i) => (
-              <div
-                key={i}
-                className="text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2"
-              >
-                {line}
-              </div>
-            ))
-          ) : (
-            <p className="text-sm text-slate-400">
-              No remarks recorded for this day.
-            </p>
-          )}
-        </div>
-
-        <button
-          onClick={onClose}
-          className="mt-4 w-full px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100 border border-slate-200"
-        >
-          Close
-        </button>
-      </div>
-    </div>
   );
 }

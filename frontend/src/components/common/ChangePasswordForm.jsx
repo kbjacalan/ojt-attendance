@@ -73,7 +73,7 @@ export default function ChangePasswordForm() {
       <div>
         <label
           htmlFor="cp-current-password"
-          className="block text-sm font-medium text-slate-700 mb-1"
+          className="block text-sm font-medium text-text-primary mb-1"
         >
           Current Password
         </label>
@@ -91,7 +91,7 @@ export default function ChangePasswordForm() {
       <div>
         <label
           htmlFor="cp-new-password"
-          className="block text-sm font-medium text-slate-700 mb-1"
+          className="block text-sm font-medium text-text-primary mb-1"
         >
           New Password
         </label>
@@ -109,7 +109,7 @@ export default function ChangePasswordForm() {
           <div className="mt-1 space-y-0.5">
             <p
               className={`flex items-center gap-1 text-xs ${
-                newPasswordLongEnough ? "text-emerald-600" : "text-slate-400"
+                newPasswordLongEnough ? "text-success" : "text-text-secondary"
               }`}
             >
               {newPasswordLongEnough ? (
@@ -121,7 +121,7 @@ export default function ChangePasswordForm() {
             </p>
             <p
               className={`flex items-center gap-1 text-xs ${
-                newPasswordIsDifferent ? "text-emerald-600" : "text-slate-400"
+                newPasswordIsDifferent ? "text-success" : "text-text-secondary"
               }`}
             >
               {newPasswordIsDifferent ? (
@@ -138,7 +138,7 @@ export default function ChangePasswordForm() {
       <div>
         <label
           htmlFor="cp-confirm-new-password"
-          className="block text-sm font-medium text-slate-700 mb-1"
+          className="block text-sm font-medium text-text-primary mb-1"
         >
           Confirm New Password
         </label>
@@ -154,7 +154,7 @@ export default function ChangePasswordForm() {
         {form.confirmNewPassword.length > 0 && (
           <p
             className={`flex items-center gap-1 text-xs mt-1 ${
-              passwordsMatch ? "text-emerald-600" : "text-red-500"
+              passwordsMatch ? "text-success" : "text-error"
             }`}
           >
             {passwordsMatch ? (
@@ -174,7 +174,7 @@ export default function ChangePasswordForm() {
         <div
           role="alert"
           aria-live="assertive"
-          className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2"
+          className="rounded-lg bg-error-subtle border border-error-border text-error text-sm px-3 py-2"
         >
           {error}
         </div>
@@ -183,7 +183,7 @@ export default function ChangePasswordForm() {
       {success && (
         <div
           role="status"
-          className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-3 py-2"
+          className="flex items-center gap-2 rounded-lg bg-success-subtle border border-success-border text-success text-sm px-3 py-2"
         >
           <Check className="w-4 h-4 shrink-0" />
           Password changed successfully.
@@ -193,7 +193,7 @@ export default function ChangePasswordForm() {
       <button
         type="submit"
         disabled={submitting || passwordsMismatch}
-        className="w-full flex items-center justify-center gap-2 rounded-lg bg-caap-navy text-white font-medium py-2.5 hover:bg-caap-blue disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand text-text-inverse font-medium py-2.5 hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       >
         {submitting ? (
           <>

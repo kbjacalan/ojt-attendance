@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { getHomeRouteForRole } from "../../utils/roleRoutes";
 import PasswordInput from "../../components/common/PasswordInput";
 import caapLogo from "../../assets/caap_logo.png";
+import TextInput from "../../components/common/TextInput";
 
 export default function Login() {
   const { login } = useAuth();
@@ -36,7 +37,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4">
+    <div className="min-h-screen bg-bg-primary flex items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl p-8">
         <div className="text-center mb-6">
           <img
@@ -44,10 +45,10 @@ export default function Login() {
             alt="CAAP Philippines"
             className="w-20 h-auto mx-auto mb-3"
           />
-          <h1 className="text-xl font-bold text-caap-navy">
+          <h1 className="text-xl font-bold text-text-primary">
             CAAP OJT Attendance
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-text-secondary">
             Dipolog Airport, Zamboanga del Norte
           </p>
         </div>
@@ -56,11 +57,11 @@ export default function Login() {
           <div>
             <label
               htmlFor="login-email"
-              className="block text-sm font-medium text-slate-700 mb-1"
+              className="block text-sm font-medium text-text-primary mb-1"
             >
               Email
             </label>
-            <input
+            <TextInput
               id="login-email"
               type="email"
               value={email}
@@ -69,7 +70,6 @@ export default function Login() {
               autoFocus
               autoComplete="email"
               disabled={submitting}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
               placeholder="you@example.com"
             />
           </div>
@@ -77,7 +77,7 @@ export default function Login() {
           <div>
             <label
               htmlFor="login-password"
-              className="block text-sm font-medium text-slate-700 mb-1"
+              className="block text-sm font-medium text-text-primary mb-1"
             >
               Password
             </label>
@@ -96,7 +96,7 @@ export default function Login() {
             <div
               role="alert"
               aria-live="assertive"
-              className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2"
+              className="rounded-lg bg-error-subtle border border-error-border text-error text-sm px-3 py-2"
             >
               {error}
             </div>
@@ -105,7 +105,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-caap-navy text-white font-medium py-2.5 hover:bg-caap-blue disabled:opacity-50 transition-colors"
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-brand text-text-inverse font-medium py-2.5 hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? (
               <>
@@ -121,11 +121,11 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-slate-500 mt-4">
+        <p className="text-center text-sm text-text-secondary mt-4">
           Don't have an account yet?{" "}
           <Link
             to="/signup"
-            className="text-caap-blue hover:text-caap-navy font-medium"
+            className="text-text-primary font-medium hover:underline underline-offset-2 transition-colors"
           >
             Sign Up
           </Link>

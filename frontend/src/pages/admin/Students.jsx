@@ -1,24 +1,17 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Plus,
   LoaderCircle,
-  UserX,
-  UserCheck,
-  FileText,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  CalendarDays,
-  Pencil,
-  Trash2,
-  CheckCircle2,
-  XCircle,
+  ChevronsDownUp,
+  ChevronsUpDown,
   Clock,
   Search,
   X,
   FunnelX,
-  GraduationCap,
   Users,
 } from "lucide-react";
 import {
@@ -32,30 +25,23 @@ import {
   listAgencies,
   listControlNumbers,
 } from "../../services/adminApi";
-import DutyStatusBadge from "../../components/common/DutyStatusBadge";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import StudentsTable from "../../components/admin/StudentsTable";
 import AgencySelect from "../../components/common/AgencySelect";
 import ControlNumberSelect from "../../components/common/ControlNumberSelect";
 import Select from "../../components/common/Select";
 import OfficialHoursFields from "../../components/common/OfficialHoursFields";
 import { formatBatchLabel } from "../../utils/batch";
 import { validateOfficialHours } from "../../utils/officialHours";
-import { getManilaDateString } from "../../utils/manilaDate";
 import { scrollBelowStickyHeader } from "../../utils/scroll";
-
-const OJT_STATUS_LABELS = {
-  pending: "Pending",
-  active: "Ongoing",
-  completed: "Completed",
-  dropped: "Dropped",
-};
-
-const OJT_STATUS_STYLES = {
-  pending: "bg-amber-50 text-amber-700 border border-amber-200",
-  active: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  completed: "bg-blue-50 text-blue-700 border border-blue-200",
-  dropped: "bg-slate-100 text-slate-500 border border-slate-200",
-};
+import TextInput from "../../components/common/TextInput";
+import {
+  OJT_STATUS_LABELS,
+  compareBatchKeysDesc,
+  getLatestBatchKey,
+  getTodayValue,
+  sortStudents,
+} from "../../utils/studentList";
 
 const SORT_OPTIONS = [
   { value: "name_asc", label: "Name (A–Z)" },
@@ -75,87 +61,6 @@ const CLEARED_FILTER_PARAMS = {
   status: null,
   course: null,
 };
-
-function getTodayValue() {
-  return getManilaDateString();
-}
-
-function sortStudents(list, sortBy) {
-  const sorted = [...list];
-  const [field, dir] = sortBy.split("_");
-  const mult = dir === "desc" ? -1 : 1;
-
-  sorted.sort((a, b) => {
-    let av, bv;
-    switch (field) {
-      case "name":
-        av = (a.full_name || "").toLowerCase();
-        bv = (b.full_name || "").toLowerCase();
-        break;
-      case "controlno":
-        av = (a.control_number || "").toLowerCase();
-        bv = (b.control_number || "").toLowerCase();
-        break;
-      case "agency":
-        av = (a.agency_name || "").toLowerCase();
-        bv = (b.agency_name || "").toLowerCase();
-        break;
-      case "date":
-        av = new Date(a.created_at).getTime();
-        bv = new Date(b.created_at).getTime();
-        break;
-      default:
-        av = bv = "";
-    }
-    if (av < bv) return -1 * mult;
-    if (av > bv) return 1 * mult;
-    return 0;
-  });
-
-  return sorted;
-}
-
-/**
- * Comparator for batch group keys ("YYYY-MM" strings, or "Unassigned").
- * Sorts newest-first (descending) so the most recently created batch
- * always appears at the top of the list, with "Unassigned" always
- * pinned to the end regardless of direction.
- *
- * Batches are stored as zero-padded "YYYY-MM" strings (see
- * utils/batch.js), so plain string comparison is already chronological
- * — the previous implementation compared a→b (ascending/oldest-first)
- * instead of b→a, which is why newest batches weren't showing first.
- */
-function compareBatchKeysDesc(a, b) {
-  if (a === "Unassigned") return 1;
-  if (b === "Unassigned") return -1;
-  return b.localeCompare(a);
-}
-
-/**
- * Returns the batch key ("YYYY-MM") of the most recently created batch
- * in a student list, ignoring "Unassigned" students unless there are no
- * batches at all. Returns null for an empty list.
- */
-function getLatestBatchKey(list) {
-  let latestKey = null;
-  let latestCreatedAt = null;
-  let hasAny = false;
-
-  for (const s of list) {
-    hasAny = true;
-    const key = s.batch && s.batch.trim() ? s.batch : null;
-    if (!key) continue;
-    const createdAt = s.created_at ? new Date(s.created_at).getTime() : 0;
-    if (latestCreatedAt === null || createdAt > latestCreatedAt) {
-      latestCreatedAt = createdAt;
-      latestKey = key;
-    }
-  }
-
-  if (latestKey !== null) return latestKey;
-  return hasAny ? "Unassigned" : null;
-}
 
 export default function Students() {
   const today = getTodayValue();
@@ -225,6 +130,11 @@ export default function Students() {
   // and is populated by the "auto-expand latest batch" effect below
   // once data loads, so only the newest batch starts expanded.
   const [collapsedBatches, setCollapsedBatches] = useState(() => new Set());
+
+  // Filter popover disclosure for the compact toolbar.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const navigate = useNavigate();
 
   // Scrolls the add/edit form into view whenever it opens — most useful
   // for Edit, since the student card that triggered it can be far down
@@ -494,12 +404,12 @@ export default function Students() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8">
+    <div className="min-h-screen bg-bg-secondary px-4 py-8">
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Students</h1>
-            <p className="text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-text-primary">Students</h1>
+            <p className="text-sm text-text-secondary">
               Manage OJT student accounts and agency assignments.
             </p>
           </div>
@@ -508,31 +418,30 @@ export default function Students() {
             <div className="flex items-center gap-1 min-w-0 flex-1">
               <button
                 onClick={() => shiftDate(-1)}
-                className="p-1.5 rounded hover:bg-slate-200 shrink-0"
+                className="p-1.5 rounded hover:bg-bg-secondary shrink-0"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <div className="flex items-center gap-1.5 text-sm min-w-0 flex-1">
-                <CalendarDays className="w-4 h-4 text-slate-400 shrink-0" />
-                <input
+                <TextInput
                   type="date"
                   value={selectedDate}
                   max={today}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="border border-slate-300 rounded-lg px-2 py-1 text-sm w-full min-w-[100px]"
+                  className="min-w-[100px]"
                 />
               </div>
               <button
                 onClick={() => shiftDate(1)}
                 disabled={isToday}
-                className="p-1.5 rounded hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                className="p-1.5 rounded hover:bg-bg-secondary disabled:hover:bg-transparent disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
               {!isToday && (
                 <button
                   onClick={() => setSelectedDate(today)}
-                  className="text-xs text-caap-blue hover:text-caap-navy underline shrink-0 whitespace-nowrap"
+                  className="text-xs text-text-primary hover:underline underline-offset-2 shrink-0 whitespace-nowrap"
                 >
                   Today
                 </button>
@@ -541,7 +450,7 @@ export default function Students() {
 
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center justify-center gap-2 bg-caap-navy text-white px-3 min-[376px]:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-caap-blue shrink-0"
+              className="flex items-center justify-center gap-2 bg-brand text-text-inverse px-3 min-[376px]:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand shrink-0"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden min-[376px]:inline">Add Student</span>
@@ -550,7 +459,7 @@ export default function Students() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2">
+          <div className="mb-4 rounded-lg bg-error-subtle border border-error-border text-error text-sm px-4 py-2">
             {error}
           </div>
         )}
@@ -567,8 +476,8 @@ export default function Students() {
               onClick={() => setApprovalFilter(f.key)}
               className={`inline-flex items-center shrink-0 text-xs sm:text-sm px-3 py-1.5 rounded-full font-medium transition-colors ${
                 approvalFilter === f.key
-                  ? "bg-caap-navy text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  ? "bg-brand text-text-inverse"
+                  : "text-text-secondary"
               }`}
             >
               {f.label}
@@ -578,8 +487,8 @@ export default function Students() {
                     f.key === "pending"
                       ? "bg-amber-400 text-amber-900"
                       : approvalFilter === f.key
-                        ? "bg-white/20 text-white"
-                        : "bg-slate-200 text-slate-600"
+                        ? "bg-bg-primary/20 text-text-inverse"
+                        : "bg-slate-200 text-text-secondary"
                   }`}
                 >
                   {f.count}
@@ -589,97 +498,147 @@ export default function Students() {
           ))}
         </div>
 
-        {/* Search, filters & sorting */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, university, course, or email…"
-              className="w-full rounded-lg border border-slate-300 pl-9 pr-9 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                title="Clear search"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:min-w-0">
-            <Select
-              variant="filter"
-              size="sm"
-              label="University"
-              value={universityFilter}
-              onChange={setUniversityFilter}
-              options={universityOptions}
-            />
-            <Select
-              variant="filter"
-              size="sm"
-              label="Batch"
-              value={batchFilter}
-              onChange={setBatchFilter}
-              options={batchOptions}
-              optionLabels={batchOptionLabels}
-            />
-            <Select
-              variant="filter"
-              size="sm"
-              label="Status"
-              value={ojtStatusFilter}
-              onChange={setOjtStatusFilter}
-              options={Object.keys(OJT_STATUS_LABELS)}
-              optionLabels={OJT_STATUS_LABELS}
-            />
-            {courseOptions.length > 0 && (
-              <Select
-                variant="filter"
-                size="sm"
-                label="Course/Program"
-                value={courseFilter}
-                onChange={setCourseFilter}
-                options={courseOptions}
+        {/* Toolbar: search + filter disclosure + result count */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by name, university, course, or email…"
+                className="w-full rounded-lg border border-border bg-bg-primary pl-9 pr-9 py-2 text-xs sm:text-sm transition-colors hover:border-border-hover focus:outline-none focus:ring-2 focus:ring-focus/30 focus:border-focus"
               />
-            )}
-
-            <div className="col-span-2 flex flex-col gap-2 sm:contents">
-              <div className="flex min-w-0 items-center gap-2 text-xs sm:order-2 sm:ml-auto sm:gap-1.5 sm:text-sm">
-                <span className="shrink-0 text-slate-500">Sort by:</span>
-                <Select
-                  variant="plain"
-                  size="sm"
-                  className="min-w-0 flex-1 sm:max-w-[220px] sm:flex-none"
-                  value={sortBy}
-                  onChange={setSortBy}
-                  options={SORT_OPTIONS}
-                />
-              </div>
-
-              {hasActiveFilters && (
+              {searchQuery && (
                 <button
-                  type="button"
-                  onClick={clearFilters}
-                  title="Clear filters"
-                  aria-label={`Clear filters (${activeFilterCount} active)`}
-                  className="inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-slate-400 hover:bg-slate-50 hover:text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-caap-blue/30 active:scale-95 sm:order-1 sm:w-auto sm:gap-1 sm:border-transparent sm:bg-transparent sm:px-1 sm:text-xs sm:hover:border-slate-200"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                  title="Clear search"
                 >
-                  <FunnelX className="h-3.5 w-3.5" />
-                  <span className="sm:hidden">Clear filters</span>
-                  <span className="hidden sm:inline">Clear</span>
-                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-caap-blue/10 px-1 text-[10px] font-semibold leading-none text-caap-navy tabular-nums">
-                    {activeFilterCount}
-                  </span>
+                  <X className="w-4 h-4" />
                 </button>
               )}
             </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setFiltersOpen((v) => !v)}
+                aria-expanded={filtersOpen}
+                aria-controls="student-filters-panel"
+                className={`inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs sm:text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30 active:scale-95 ${
+                  hasActiveFilters
+                    ? "border-focus bg-brand/5 text-text-primary"
+                    : "border-border bg-bg-primary text-text-secondary hover:border-border-hover hover:text-text-primary"
+                }`}
+              >
+                <FunnelX className="h-3.5 w-3.5" />
+                Filters
+                {hasActiveFilters && (
+                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold leading-none text-text-inverse tabular-nums">
+                    {activeFilterCount}
+                  </span>
+                )}
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+            </div>
           </div>
+
+          {filtersOpen && (
+            <div
+              id="student-filters-panel"
+              className="mt-2 bg-bg-primary rounded-2xl border border-border p-4 space-y-3"
+            >
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-end sm:gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-text-secondary mb-1">
+                    University
+                  </p>
+                  <Select
+                    variant="filter"
+                    size="sm"
+                    label="University"
+                    value={universityFilter}
+                    onChange={setUniversityFilter}
+                    options={universityOptions}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-text-secondary mb-1">
+                    Batch
+                  </p>
+                  <Select
+                    variant="filter"
+                    size="sm"
+                    label="Batch"
+                    value={batchFilter}
+                    onChange={setBatchFilter}
+                    options={batchOptions}
+                    optionLabels={batchOptionLabels}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium text-text-secondary mb-1">
+                    Status
+                  </p>
+                  <Select
+                    variant="filter"
+                    size="sm"
+                    label="Status"
+                    value={ojtStatusFilter}
+                    onChange={setOjtStatusFilter}
+                    options={Object.keys(OJT_STATUS_LABELS)}
+                    optionLabels={OJT_STATUS_LABELS}
+                  />
+                </div>
+                {courseOptions.length > 0 && (
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-text-secondary mb-1">
+                      Course/Program
+                    </p>
+                    <Select
+                      variant="filter"
+                      size="sm"
+                      label="Course/Program"
+                      value={courseFilter}
+                      onChange={setCourseFilter}
+                      options={courseOptions}
+                    />
+                  </div>
+                )}
+                <div className="min-w-0 col-span-2 sm:col-span-1">
+                  <p className="text-[11px] font-medium text-text-secondary mb-1">
+                    Sort by
+                  </p>
+                  <Select
+                    variant="plain"
+                    size="sm"
+                    value={sortBy}
+                    onChange={setSortBy}
+                    options={SORT_OPTIONS}
+                  />
+                </div>
+              </div>
+
+              {hasActiveFilters && (
+                <div className="flex justify-end border-t border-border pt-3">
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    title="Clear filters"
+                    aria-label={`Clear filters (${activeFilterCount} active)`}
+                    className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-text-secondary transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30"
+                  >
+                    <FunnelX className="h-3.5 w-3.5" />
+                    Clear all filters ({activeFilterCount})
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div ref={formSectionRef}>
@@ -732,13 +691,43 @@ export default function Students() {
           />
         )}
 
+        {!loading && students.length > 0 && (
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p
+              className="flex items-baseline gap-1.5 text-sm text-text-secondary"
+              aria-live="polite"
+            >
+              <span className="text-xl font-semibold tabular-nums text-text-primary">
+                {filteredStudents.length}
+              </span>
+              {filteredStudents.length === students.length
+                ? `student${students.length === 1 ? "" : "s"}`
+                : `of ${students.length} students`}
+            </p>
+            {batchGroups.length > 1 && (
+              <button
+                type="button"
+                onClick={toggleAllBatches}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-bg-primary px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border-hover hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30"
+              >
+                {allBatchesCollapsed ? (
+                  <ChevronsUpDown className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronsDownUp className="h-3.5 w-3.5" />
+                )}
+                {allBatchesCollapsed ? "Expand all" : "Collapse all"}
+              </button>
+            )}
+          </div>
+        )}
+
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-slate-400 bg-white rounded-2xl border border-slate-200">
+          <div className="flex items-center justify-center border border-border bg-bg-primary py-12 text-text-secondary shadow-card">
             <LoaderCircle className="w-5 h-5 animate-spin" />
           </div>
         ) : filteredStudents.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
-            <p className="text-slate-400 text-sm">
+          <div className="border border-border bg-bg-primary py-12 text-center text-sm text-text-secondary shadow-card">
+            <p className="text-text-secondary text-sm">
               {students.length === 0
                 ? "No students yet. Add one to get started."
                 : "No students match your search/filters."}
@@ -748,7 +737,7 @@ export default function Students() {
                 <button
                   type="button"
                   onClick={showAllStudents}
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-caap-navy px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-caap-blue focus:outline-none focus-visible:ring-2 focus-visible:ring-caap-blue/40 active:scale-95 sm:text-sm"
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3 py-1.5 text-xs font-medium text-text-inverse transition-colors hover:bg-brand-hover disabled:hover:bg-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/40 active:scale-95 sm:text-sm"
                 >
                   <FunnelX className="h-3.5 w-3.5" />
                   Show all students
@@ -757,16 +746,6 @@ export default function Students() {
           </div>
         ) : (
           <div className="space-y-4">
-            {batchGroups.length > 1 && (
-              <div className="flex justify-end">
-                <button
-                  onClick={toggleAllBatches}
-                  className="text-xs text-slate-500 hover:text-slate-700 underline"
-                >
-                  {allBatchesCollapsed ? "Expand all" : "Collapse all"}
-                </button>
-              </div>
-            )}
             {batchGroups.map(([batchName, batchStudents]) => (
               <BatchGroup
                 key={batchName}
@@ -775,49 +754,20 @@ export default function Students() {
                 collapsed={collapsedBatches.has(batchName)}
                 onToggle={() => toggleBatch(batchName)}
                 isToday={isToday}
-                selectedDate={selectedDate}
                 onApprove={handleApprove}
                 onReject={handleReject}
                 onEdit={setEditingStudent}
                 onToggleActive={handleToggleActive}
                 onDelete={setDeletingStudent}
+                onViewDTR={(studentId) =>
+                  navigate(`/admin/students/${studentId}/dtr`)
+                }
               />
             ))}
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-/**
- * Renders text with a `truncate` (ellipsis) style, and only attaches a
- * `title` tooltip when the text is actually cut off — i.e. its content
- * is wider than the space it's rendered in. Re-checks on resize since
- * column widths can change (e.g. narrower viewports).
- */
-function Truncate({ text, className = "", as: Tag = "span", title }) {
-  const ref = useRef(null);
-  const [isTruncated, setIsTruncated] = useState(false);
-
-  useEffect(() => {
-    function checkTruncation() {
-      const el = ref.current;
-      if (el) setIsTruncated(el.scrollWidth > el.clientWidth);
-    }
-    checkTruncation();
-    window.addEventListener("resize", checkTruncation);
-    return () => window.removeEventListener("resize", checkTruncation);
-  }, [text]);
-
-  return (
-    <Tag
-      ref={ref}
-      className={`truncate ${className}`}
-      title={isTruncated ? (title ?? text) : undefined}
-    >
-      {text}
-    </Tag>
   );
 }
 
@@ -827,421 +777,67 @@ function BatchGroup({
   collapsed,
   onToggle,
   isToday,
-  selectedDate,
   onApprove,
   onReject,
   onEdit,
   onToggleActive,
   onDelete,
+  onViewDTR,
 }) {
   const pendingInBatch = students.filter(
     (s) => s.approval_status === "pending",
   ).length;
 
+  const batchLabel =
+    batchName === "Unassigned"
+      ? "Unassigned Batch"
+      : `Batch ${formatBatchLabel(batchName)}`;
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+    <section aria-label={batchLabel}>
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+        aria-expanded={!collapsed}
+        className="sticky top-0 z-10 flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-bg-primary bg-linear-to-r from-brand/10 via-brand-secondary/5 to-transparent px-4 py-3 text-left shadow-card transition-colors hover:border-border-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30"
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <span className="flex items-center gap-2 min-w-0">
           {collapsed ? (
-            <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+            <ChevronRight className="w-4 h-4 text-text-secondary shrink-0" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+            <ChevronDown className="w-4 h-4 text-text-secondary shrink-0" />
           )}
-          <Truncate
-            as="span"
-            className="font-semibold text-slate-800"
-            text={
-              batchName === "Unassigned"
-                ? "Unassigned Batch"
-                : `Batch ${formatBatchLabel(batchName)}`
-            }
-          />
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
+          <span className="font-semibold text-text-primary truncate">
+            {batchLabel}
+          </span>
+        </span>
+        <span className="flex items-center gap-2 shrink-0">
           {pendingInBatch > 0 && (
-            <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+            <span className="flex items-center gap-1 rounded-full border border-warning-border bg-warning-subtle px-2 py-1 text-xs text-warning">
               <Clock className="w-3.5 h-3.5" />
               {pendingInBatch} pending
             </span>
           )}
-          <span className="flex items-center gap-1.5 text-xs text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded-full">
+          <span className="flex items-center gap-1.5 rounded-full border border-border bg-bg-primary px-2 py-1 text-xs text-text-secondary">
             <Users className="w-3.5 h-3.5" />
             {students.length} student{students.length === 1 ? "" : "s"}
           </span>
-        </div>
+        </span>
       </button>
 
       {!collapsed && (
-        <>
-          {/* Table view — tablet and up */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-xs table-fixed">
-              <colgroup>
-                <col style={{ width: "13%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "7%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "12%" }} />
-                <col style={{ width: "14%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "6%" }} />
-                <col style={{ width: "8%" }} />
-              </colgroup>
-              <thead className="bg-slate-50 text-slate-500 text-left border-t border-slate-100">
-                <tr>
-                  <th className="px-2 py-2 font-medium truncate">Name</th>
-                  <th className="px-2 py-2 font-medium truncate">University</th>
-                  <th className="px-2 py-2 font-medium truncate">Course</th>
-                  <th className="px-2 py-2 font-medium truncate">Agency</th>
-                  <th className="px-2 py-2 font-medium truncate">
-                    OJT Control No.
-                  </th>
-                  <th className="px-2 py-2 font-medium truncate">
-                    {isToday ? "Today" : selectedDate}
-                  </th>
-                  <th className="px-2 py-2 font-medium truncate">OJT Status</th>
-                  <th className="px-2 py-2 font-medium truncate">Account</th>
-                  <th className="px-2 py-2 font-medium"></th>
-                  <th className="px-2 py-2 font-medium"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {students.map((s) => (
-                  <tr key={s.student_id}>
-                    <td className="px-2 py-1.5 truncate">
-                      <Truncate
-                        as="div"
-                        className="font-medium text-slate-800"
-                        text={s.full_name}
-                      />
-                      <Truncate
-                        as="div"
-                        className="text-[11px] text-slate-400"
-                        text={s.email}
-                      />
-                    </td>
-                    <td className="px-2 py-1.5 text-slate-600">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <GraduationCap className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                        <Truncate text={s.university || "—"} />
-                      </div>
-                    </td>
-                    <td className="px-2 py-1.5 text-slate-600 truncate">
-                      <Truncate text={s.course || "—"} />
-                    </td>
-                    <td className="px-2 py-1.5 text-slate-600 truncate">
-                      <Truncate text={s.agency_name || "Unassigned"} />
-                    </td>
-                    <td className="px-2 py-1.5 text-slate-600 truncate">
-                      <Truncate text={s.control_number || "—"} />
-                    </td>
-                    <td className="px-2 py-1.5 truncate">
-                      <DutyStatusBadge
-                        status={s.status}
-                        lastPunchLabel={s.lastPunchLabel}
-                        lastPunchTime={s.lastPunchTime}
-                        isToday={isToday}
-                      />
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <Truncate
-                        className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium inline-block max-w-full ${
-                          OJT_STATUS_STYLES[s.ojt_status || "active"]
-                        }`}
-                        text={OJT_STATUS_LABELS[s.ojt_status || "active"]}
-                      />
-                      <p className="text-[10px] text-slate-400 mt-1 truncate">
-                        {s.cumulative_hours ?? 0}/{s.required_hours ?? 0} hrs
-                      </p>
-                    </td>
-                    <td className="px-2 py-1.5">
-                      {s.approval_status === "pending" && (
-                        <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200 max-w-full">
-                          <Clock className="w-3 h-3 shrink-0" />
-                          <Truncate text="Pending" />
-                        </span>
-                      )}
-                      {s.approval_status === "rejected" && (
-                        <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200 max-w-full">
-                          <XCircle className="w-3 h-3 shrink-0" />
-                          <Truncate text="Rejected" />
-                        </span>
-                      )}
-                      {s.approval_status === "approved" && (
-                        <Truncate
-                          className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium inline-block max-w-full ${
-                            s.is_active
-                              ? "bg-emerald-50 text-emerald-700"
-                              : "bg-slate-100 text-slate-500"
-                          }`}
-                          text={s.is_active ? "Active" : "Deactivated"}
-                        />
-                      )}
-                    </td>
-                    <td className="px-2 py-1.5 text-right">
-                      <Link
-                        to={`/admin/students/${s.student_id}/dtr`}
-                        className="inline-flex items-center gap-1 text-caap-blue hover:text-caap-navy text-xs font-medium truncate max-w-full"
-                        title="View DTR"
-                      >
-                        <FileText className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">DTR</span>
-                      </Link>
-                    </td>
-                    <td className="px-2 py-1.5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {s.approval_status !== "approved" && (
-                          <button
-                            onClick={() => onApprove(s.student_id)}
-                            className="text-emerald-600 hover:text-emerald-800"
-                            title="Approve"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {s.approval_status === "pending" && (
-                          <button
-                            onClick={() => onReject(s.student_id)}
-                            className="text-amber-600 hover:text-amber-800"
-                            title="Reject"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {s.approval_status === "approved" && (
-                          <>
-                            <button
-                              onClick={() => onEdit(s)}
-                              className="text-slate-500 hover:text-slate-800"
-                              title="Edit"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() =>
-                                onToggleActive(s.user_id, s.is_active)
-                              }
-                              className="text-slate-500 hover:text-slate-800"
-                              title={s.is_active ? "Deactivate" : "Activate"}
-                            >
-                              {s.is_active ? (
-                                <UserX className="w-3.5 h-3.5" />
-                              ) : (
-                                <UserCheck className="w-3.5 h-3.5" />
-                              )}
-                            </button>
-                          </>
-                        )}
-                        <button
-                          onClick={() => onDelete(s)}
-                          className="text-red-500 hover:text-red-700"
-                          title="Delete permanently"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Card view — mobile */}
-          <div className="md:hidden divide-y divide-slate-100">
-            {students.map((s) => (
-              <StudentCard
-                key={s.student_id}
-                student={s}
-                isToday={isToday}
-                selectedDate={selectedDate}
-                onApprove={onApprove}
-                onReject={onReject}
-                onEdit={onEdit}
-                onToggleActive={onToggleActive}
-                onDelete={onDelete}
-              />
-            ))}
-          </div>
-        </>
+        <StudentsTable
+          students={students}
+          caption={`${batchLabel} students`}
+          isToday={isToday}
+          onApprove={onApprove}
+          onReject={onReject}
+          onEdit={onEdit}
+          onToggleActive={onToggleActive}
+          onDelete={onDelete}
+          onViewDTR={onViewDTR}
+        />
       )}
-    </div>
-  );
-}
-
-/**
- * Mobile counterpart to the students table row — same data and actions,
- * laid out as a stacked card so it stays readable and tappable on small
- * screens instead of forcing a 9-column table to scroll horizontally.
- */
-function StudentCard({
-  student: s,
-  isToday,
-  selectedDate,
-  onApprove,
-  onReject,
-  onEdit,
-  onToggleActive,
-  onDelete,
-}) {
-  return (
-    <div className="p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Truncate
-            as="p"
-            className="font-medium text-slate-800"
-            text={s.full_name}
-          />
-          <Truncate
-            as="p"
-            className="text-[11px] text-slate-400"
-            text={s.email}
-          />
-        </div>
-        <Link
-          to={`/admin/students/${s.student_id}/dtr`}
-          className="shrink-0 inline-flex items-center gap-1 text-caap-blue hover:text-caap-navy text-xs font-medium"
-          title="View DTR"
-        >
-          <FileText className="w-3.5 h-3.5" /> DTR
-        </Link>
-      </div>
-
-      <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs">
-        <div className="min-w-0">
-          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
-            University
-          </p>
-          <div className="flex items-center gap-1 min-w-0 text-slate-600">
-            <GraduationCap className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-            <Truncate text={s.university || "—"} />
-          </div>
-        </div>
-        <div className="min-w-0">
-          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
-            Course
-          </p>
-          <Truncate className="text-slate-600" text={s.course || "—"} />
-        </div>
-        <div className="min-w-0">
-          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
-            {isToday ? "Today" : selectedDate}
-          </p>
-          <DutyStatusBadge
-            status={s.status}
-            lastPunchLabel={s.lastPunchLabel}
-            lastPunchTime={s.lastPunchTime}
-            isToday={isToday}
-          />
-        </div>
-        <div className="min-w-0">
-          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
-            OJT Status
-          </p>
-          <Truncate
-            className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium inline-block max-w-full ${
-              OJT_STATUS_STYLES[s.ojt_status || "active"]
-            }`}
-            text={OJT_STATUS_LABELS[s.ojt_status || "active"]}
-          />
-          <p className="text-[10px] text-slate-400 mt-1 truncate">
-            {s.cumulative_hours ?? 0}/{s.required_hours ?? 0} hrs
-          </p>
-        </div>
-        <div className="col-span-2 min-w-0">
-          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
-            Agency
-          </p>
-          <Truncate
-            className="text-slate-600"
-            text={s.agency_name || "Unassigned"}
-          />
-        </div>
-        <div className="col-span-2 min-w-0">
-          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
-            OJT Control No.
-          </p>
-          <Truncate className="text-slate-600" text={s.control_number || "—"} />
-        </div>
-        <div className="col-span-2 min-w-0">
-          <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1">
-            Account
-          </p>
-          {s.approval_status === "pending" && (
-            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200">
-              <Clock className="w-3 h-3 shrink-0" /> Pending
-            </span>
-          )}
-          {s.approval_status === "rejected" && (
-            <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-red-50 text-red-700 border border-red-200">
-              <XCircle className="w-3 h-3 shrink-0" /> Rejected
-            </span>
-          )}
-          {s.approval_status === "approved" && (
-            <span
-              className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium inline-block ${
-                s.is_active
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-slate-100 text-slate-500"
-              }`}
-            >
-              {s.is_active ? "Active" : "Deactivated"}
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-4 border-t border-slate-100 pt-2.5">
-        {s.approval_status !== "approved" && (
-          <button
-            onClick={() => onApprove(s.student_id)}
-            className="flex items-center gap-1 text-emerald-600 hover:text-emerald-800 text-xs font-medium"
-          >
-            <CheckCircle2 className="w-4 h-4" /> Approve
-          </button>
-        )}
-        {s.approval_status === "pending" && (
-          <button
-            onClick={() => onReject(s.student_id)}
-            className="flex items-center gap-1 text-amber-600 hover:text-amber-800 text-xs font-medium"
-          >
-            <XCircle className="w-4 h-4" /> Reject
-          </button>
-        )}
-        {s.approval_status === "approved" && (
-          <>
-            <button
-              onClick={() => onEdit(s)}
-              className="flex items-center gap-1 text-slate-500 hover:text-slate-800 text-xs font-medium"
-            >
-              <Pencil className="w-4 h-4" /> Edit
-            </button>
-            <button
-              onClick={() => onToggleActive(s.user_id, s.is_active)}
-              className="flex items-center gap-1 text-slate-500 hover:text-slate-800 text-xs font-medium"
-            >
-              {s.is_active ? (
-                <UserX className="w-4 h-4" />
-              ) : (
-                <UserCheck className="w-4 h-4" />
-              )}
-              {s.is_active ? "Deactivate" : "Activate"}
-            </button>
-          </>
-        )}
-        <button
-          onClick={() => onDelete(s)}
-          className="ml-auto flex items-center gap-1 text-red-500 hover:text-red-700 text-xs font-medium"
-        >
-          <Trash2 className="w-4 h-4" /> Delete
-        </button>
-      </div>
-    </div>
+    </section>
   );
 }
 
@@ -1317,9 +913,9 @@ function StudentForm({ agencies, controlNumbers, onClose, onCreated }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 space-y-4"
+      className="bg-bg-primary rounded-2xl border border-border p-6 mb-6 space-y-4"
     >
-      <h2 className="font-semibold text-slate-800">New Student</h2>
+      <h2 className="font-semibold text-text-primary">New Student</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field
@@ -1399,20 +995,20 @@ function StudentForm({ agencies, controlNumbers, onClose, onCreated }) {
         showValidation={attemptedSubmit}
       />
 
-      {error && <div className="text-sm text-red-600">{error}</div>}
+      {error && <div className="text-sm text-error">{error}</div>}
 
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={submitting}
-          className="bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue disabled:opacity-50"
+          className="bg-brand text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? "Saving…" : "Create Student"}
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
+          className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary"
         >
           Cancel
         </button>
@@ -1510,9 +1106,9 @@ function EditStudentForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 space-y-4"
+      className="bg-bg-primary rounded-2xl border border-border p-6 mb-6 space-y-4"
     >
-      <h2 className="font-semibold text-slate-800">Edit Student</h2>
+      <h2 className="font-semibold text-text-primary">Edit Student</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Field
@@ -1588,20 +1184,20 @@ function EditStudentForm({
         </div>
       </div>
 
-      {error && <div className="text-sm text-red-600">{error}</div>}
+      {error && <div className="text-sm text-error">{error}</div>}
 
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={submitting}
-          className="bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue disabled:opacity-50"
+          className="bg-brand text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? "Saving…" : "Save Changes"}
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
+          className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary"
         >
           Cancel
         </button>
@@ -1621,17 +1217,16 @@ function Field({
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-600 mb-1">
+      <label className="block text-xs font-medium text-text-secondary mb-1">
         {label}
       </label>
-      <input
+      <TextInput
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
         placeholder={placeholder}
         min={min}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
       />
     </div>
   );

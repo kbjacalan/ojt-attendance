@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  CheckCircle2,
+  ChevronRight,
   FileText,
   Building2,
-  GraduationCap,
   IdCard,
   LoaderCircle,
   AlertTriangle,
+  Clock,
 } from "lucide-react";
 import TimeInOutButton from "../../components/attendance/TimeInOutButton";
 import OvertimeRequestPanel from "../../components/attendance/OvertimeRequestPanel";
@@ -22,6 +24,7 @@ import {
   computeDutyStatusFromDay,
   getManilaDayNumber,
 } from "../../utils/dutyStatusFromDay";
+import { greetingFor } from "../../utils/greeting";
 
 const PH_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
   timeZone: "Asia/Manila",
@@ -48,33 +51,7 @@ function useClock() {
   return now;
 }
 
-function greetingFor(now) {
-  const phHour = parseInt(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Manila",
-      hour: "numeric",
-      hour12: false,
-    }).format(now),
-    10,
-  );
-  if (phHour < 12) return "Good morning";
-  if (phHour < 18) return "Good afternoon";
-  return "Good evening";
-}
-
-/**
- * Student-facing attendance page. studentId comes from the
- * authenticated user's session (set at login). Navbar is provided
- * by the shared Layout component in App.jsx, not rendered here.
- *
- * Layout: a sticky, semi-fullscreen (50vh) live map sits at the top of
- * the viewport, showing the agency's geofence and the student's live
- * GPS dot. The rest of the page (today's status, Time In/Out, DTR
- * link) scrolls in a rounded sheet that slides up over the map as the
- * page scrolls — the map stays pinned via `position: sticky` rather
- * than a scroll-linked JS transform, so it stays smooth on mobile and
- * never fights with Leaflet's own tile rendering.
- */
+/** Student-facing attendance page. studentId comes from auth session. */
 export default function Attendance() {
   const { user } = useAuth();
   const now = useClock();
@@ -128,7 +105,9 @@ export default function Attendance() {
   }, []);
 
   const todayDay = dtr?.days?.find((d) => d.day === getManilaDayNumber(now));
-  const todayDuty = computeDutyStatusFromDay(todayDay);
+  const todayDuty = computeDutyStatusFromDay(todayDay, {
+    pmEnd: dtr?.student?.pmEnd,
+  });
   const isUnassigned =
     dtr?.student?.agency === "Unassigned" || Boolean(agencyError);
   const firstName = user.fullName?.split(" ")[0] || "there";
@@ -146,6 +125,13 @@ export default function Attendance() {
   const hoursMet = requiredHours > 0 && hoursLogged >= requiredHours;
   const progressPercent =
     requiredHours > 0 ? Math.min(100, (hoursLogged / requiredHours) * 100) : 0;
+  const hoursRemaining = Number(
+    Math.max(0, requiredHours - hoursLogged).toFixed(2),
+  );
+  const percentLabel =
+    progressPercent > 0 && progressPercent < 1
+      ? "<1%"
+      : `${Math.round(progressPercent)}%`;
 
   // Reuses the same live position already being watched for the map, so
   // the button can warn/disable itself the moment we know the student is
@@ -171,7 +157,7 @@ export default function Attendance() {
       : null;
 
   return (
-    <div className="bg-slate-50">
+    <div className="bg-bg-secondary">
       {/* Sticky, semi-fullscreen live map hero */}
       <div className="sticky top-0 z-0 h-[50vh] min-h-[320px] max-h-[560px] w-full">
         <AttendanceMap
@@ -188,128 +174,167 @@ export default function Attendance() {
       {/* Scrolling content sheet, overlapping the map's bottom edge by
           --attendance-sheet-overlap (see index.css — the map's
           floating controls key their clearance off the same variable) */}
-      <div className="relative z-10 mt-[calc(var(--attendance-sheet-overlap)*-1)] rounded-t-3xl bg-slate-50 shadow-[0_-8px_24px_-6px_rgba(0,0,0,0.08)]">
+      <div className="relative z-10 mt-[calc(var(--attendance-sheet-overlap)*-1)] rounded-t-3xl bg-bg-secondary shadow-[0_-8px_24px_-6px_rgba(0,0,0,0.08)]">
         <div className="w-full max-w-md mx-auto px-4 pt-6 pb-10 space-y-4">
           {/* Drag handle affordance, purely visual */}
           <div className="flex justify-center">
             <div className="w-10 h-1 rounded-full bg-slate-200" />
           </div>
 
-          {/* Loading / error states for the context card */}
           {loading && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center justify-center gap-2 text-slate-500 text-sm">
-              <LoaderCircle className="w-4 h-4 animate-spin" />
+            <div className="flex items-center justify-center gap-2 rounded-2xl border border-border bg-bg-primary p-6 text-sm text-text-secondary shadow-card">
+              <LoaderCircle className="h-4 w-4 animate-spin" />
               Loading your attendance…
             </div>
           )}
 
           {!loading && loadError && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <div className="flex items-start gap-2 text-red-600 text-sm">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{loadError}</span>
-              </div>
+            <div
+              role="alert"
+              className="flex items-start gap-2.5 rounded-2xl border border-error-border bg-error-subtle p-4 text-sm text-error"
+            >
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{loadError}</span>
             </div>
           )}
 
-          {/* Context card: today's status, agency/course, this month's hours */}
           {!loading && !loadError && dtr && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                  Today
-                </span>
+            <section
+              aria-label="Attendance summary"
+              className="rounded-2xl border border-border bg-bg-primary p-4 shadow-card sm:p-5"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+                    Today
+                  </p>
+                  <p className="text-sm font-semibold text-text-primary">
+                    Your status
+                  </p>
+                </div>
                 <DutyStatusBadge
                   status={todayDuty.status}
-                  lastPunchLabel={todayDuty.lastPunchLabel}
-                  lastPunchTime={todayDuty.lastPunchTime}
                   isToday
                   align="right"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-start gap-2.5">
-                  <span className="shrink-0 w-8 h-8 rounded-full bg-caap-navy/10 flex items-center justify-center">
-                    <Building2 className="w-4 h-4 text-caap-navy" />
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border bg-bg-secondary p-3">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-text-primary ring-1 ring-border"
+                  >
+                    <Building2 className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-slate-400 text-xs">Agency</p>
+                    <p className="text-[11px] font-medium text-text-secondary">
+                      Agency
+                    </p>
                     <p
-                      className={`font-medium truncate ${
-                        isUnassigned ? "text-amber-600" : "text-slate-800"
+                      className={`truncate text-sm font-semibold ${
+                        isUnassigned ? "text-warning" : "text-text-primary"
                       }`}
+                      title={dtr.student.agency}
                     >
                       {dtr.student.agency}
                     </p>
                   </div>
                 </div>
-                <div className="flex items-start gap-2.5">
-                  <span className="shrink-0 w-8 h-8 rounded-full bg-caap-navy/10 flex items-center justify-center">
-                    <GraduationCap className="w-4 h-4 text-caap-navy" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-slate-400 text-xs">Course</p>
-                    <p className="font-medium text-slate-800 truncate">
-                      {dtr.student.course || "—"}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex items-start gap-2.5 col-span-2">
-                  <span className="shrink-0 w-8 h-8 rounded-full bg-caap-navy/10 flex items-center justify-center">
-                    <IdCard className="w-4 h-4 text-caap-navy" />
+                <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border bg-bg-secondary p-3">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-text-primary ring-1 ring-border"
+                  >
+                    <IdCard className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-slate-400 text-xs">OJT Control No.</p>
-                    <p className="font-medium text-slate-800 truncate">
-                      {dtr.student.controlNumber || "—"}
+                    <p className="text-[11px] font-medium text-text-secondary">
+                      OJT Control No.
+                    </p>
+                    <p
+                      className="truncate font-mono text-sm font-semibold text-text-primary"
+                      title={dtr.student.controlNumber || undefined}
+                    >
+                      {dtr.student.controlNumber || "Not set"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <div className="flex items-baseline justify-between gap-2 flex-wrap">
-                  <span className="text-sm text-slate-500">Hours logged</span>
+              <div className="mt-3 rounded-xl border border-border bg-bg-secondary p-3.5">
+                <div className="flex items-center gap-3">
                   <span
-                    className={`text-base sm:text-lg font-semibold ${
-                      hoursMet ? "text-emerald-600" : "text-caap-navy"
-                    }`}
+                    aria-hidden="true"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-text-primary ring-1 ring-border"
                   >
-                    {hoursLogged}
-                    {requiredHours > 0 && (
-                      <span className="text-sm font-normal text-slate-400">
-                        {" "}
-                        / {requiredHours}
-                      </span>
-                    )}
-                    <span className="text-sm font-normal text-slate-400">
-                      {" "}
-                      hrs
-                    </span>
+                    <Clock className="h-4 w-4" />
                   </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-medium text-text-secondary">
+                      Hours logged
+                    </p>
+                    <p className="leading-tight">
+                      <span
+                        className={`text-lg font-semibold tabular-nums ${
+                          hoursMet ? "text-success" : "text-text-primary"
+                        }`}
+                      >
+                        {hoursLogged}
+                      </span>
+                      <span className="text-sm tabular-nums text-text-secondary">
+                        {requiredHours > 0 ? ` / ${requiredHours} hrs` : " hrs"}
+                      </span>
+                    </p>
+                  </div>
+                  {requiredHours > 0 && (
+                    <span
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium tabular-nums ${
+                        hoursMet
+                          ? "border-success-border bg-success-subtle text-success"
+                          : "border-border bg-bg-primary text-text-primary"
+                      }`}
+                    >
+                      {percentLabel}
+                    </span>
+                  )}
                 </div>
 
                 {requiredHours > 0 && (
-                  <div className="mt-2.5">
-                    <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                  <div className="mt-3">
+                    <div
+                      role="progressbar"
+                      aria-label="Required hours progress"
+                      aria-valuemin={0}
+                      aria-valuemax={requiredHours}
+                      aria-valuenow={Math.min(hoursLogged, requiredHours)}
+                      className="h-2 w-full overflow-hidden rounded-full bg-border"
+                    >
                       <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          hoursMet ? "bg-emerald-500" : "bg-caap-navy"
+                        className={`h-full rounded-full transition-all duration-500 motion-reduce:transition-none ${
+                          hoursMet ? "bg-success" : "bg-brand"
                         }`}
-                        style={{ width: `${progressPercent}%` }}
+                        style={{
+                          width: `${progressPercent}%`,
+                          minWidth: progressPercent > 0 ? "0.5rem" : 0,
+                        }}
                       />
                     </div>
-                    <p className="mt-1 text-[11px] text-slate-400 text-right">
+                    <p
+                      className={`mt-2 flex items-center gap-1 text-[11px] ${
+                        hoursMet ? "text-success" : "text-text-secondary"
+                      }`}
+                    >
+                      {hoursMet && <CheckCircle2 className="h-3 w-3" />}
                       {hoursMet
                         ? "Required hours met"
-                        : `${Math.round(progressPercent)}% of required hours`}
+                        : `${hoursRemaining} hrs remaining`}
                     </p>
                   </div>
                 )}
               </div>
-            </div>
+            </section>
           )}
 
           {!loading && (
@@ -353,10 +378,23 @@ export default function Attendance() {
 
           <Link
             to="/dtr"
-            className="flex items-center justify-center gap-2 text-sm text-caap-blue hover:text-caap-navy py-2"
+            className="group flex w-full items-center gap-3 rounded-2xl border border-border bg-bg-primary p-4 text-left shadow-card transition-colors hover:border-border-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30 sm:p-5"
           >
-            <FileText className="w-4 h-4" />
-            View / Print My DTR
+            <span
+              aria-hidden="true"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-text-primary ring-1 ring-border"
+            >
+              <FileText className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-text-primary">
+                View / Print My DTR
+              </span>
+              <span className="block truncate text-xs text-text-secondary">
+                Review your daily time record and print it.
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 shrink-0 text-text-secondary transition-transform group-hover:translate-x-0.5 group-hover:text-text-primary" />
           </Link>
         </div>
       </div>

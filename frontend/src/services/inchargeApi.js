@@ -1,31 +1,4 @@
-import { notifySessionExpired } from "./sessionEvents";
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000/api";
-
-async function request(path, options = {}) {
-  const token = localStorage.getItem("token");
-
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-
-  const data = await res.json().catch(() => ({}));
-
-  if (!res.ok) {
-    if (res.status === 401 && token) {
-      notifySessionExpired();
-    }
-    throw new Error(data.error || "Request failed.");
-  }
-
-  return data;
-}
+import { request } from "./http";
 
 export const listMyStudents = (date) =>
   request(date ? `/incharge/students?date=${date}` : "/incharge/students");

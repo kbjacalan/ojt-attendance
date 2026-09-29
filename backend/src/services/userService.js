@@ -416,7 +416,10 @@ async function setUserActiveStatus(userId, isActive) {
   return rows[0];
 }
 
-async function updateStaffAccount(userId, { fullName, email, agencyId }) {
+async function updateStaffAccount(
+  userId,
+  { fullName, email, password, agencyId },
+) {
   const setClauses = [];
   const values = [];
   let idx = 1;
@@ -428,6 +431,10 @@ async function updateStaffAccount(userId, { fullName, email, agencyId }) {
   if (email !== undefined) {
     setClauses.push(`email = $${idx++}`);
     values.push(email.toLowerCase().trim());
+  }
+  if (password !== undefined) {
+    setClauses.push(`password_hash = $${idx++}`);
+    values.push(await hashPassword(password));
   }
 
   if (setClauses.length === 0 && agencyId === undefined) {

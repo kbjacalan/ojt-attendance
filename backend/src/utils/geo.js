@@ -1,11 +1,9 @@
 /**
- * Mirrors backend/src/utils/geo.js exactly. Used only to show the
- * student a live "you're inside/outside the geofence" preview on the
- * Attendance page map — the backend independently re-validates every
- * time-in/time-out request, so this never needs to be trusted as the
- * source of truth.
+ * Backend geofence check — the source of truth for every
+ * time-in/time-out request. The frontend has its own preview copy
+ * (frontend/src/utils/geo.js); this copy is authoritative.
  */
-export function haversineDistanceMeters(lat1, lng1, lat2, lng2) {
+function haversineDistanceMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000; // Earth's radius in meters
   const toRad = (deg) => (deg * Math.PI) / 180;
 
@@ -23,7 +21,7 @@ export function haversineDistanceMeters(lat1, lng1, lat2, lng2) {
   return R * c;
 }
 
-export function isWithinGeofence(
+function isWithinGeofence(
   studentLat,
   studentLng,
   agencyLat,
@@ -41,3 +39,5 @@ export function isWithinGeofence(
     distanceMeters: Math.round(distance),
   };
 }
+
+module.exports = { haversineDistanceMeters, isWithinGeofence };

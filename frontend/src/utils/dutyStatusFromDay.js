@@ -1,4 +1,7 @@
-export function computeDutyStatusFromDay(day) {
+import { getManilaMinutesSinceMidnight } from "./manilaDate";
+import { minutesFromHHMM } from "./officialHours";
+
+export function computeDutyStatusFromDay(day, { pmEnd, isToday = true } = {}) {
   if (!day) {
     return { status: "no_record", lastPunchLabel: null, lastPunchTime: null };
   }
@@ -26,6 +29,13 @@ export function computeDutyStatusFromDay(day) {
   }
 
   const afternoonComplete = Boolean(day.pmIn && day.pmOut);
+  const morningStarted = Boolean(day.amIn);
+  const morningComplete = Boolean(day.amIn && day.amOut);
+  const afternoonStarted = Boolean(day.pmIn);
+
+  const pmWindowHasPassed = isToday
+    ? Boolean(pmEnd && getManilaMinutesSinceMidnight() > minutesFromHHMM(pmEnd))
+    : true;
 
   let lastPunchLabel = null;
   let lastPunchTime = null;
@@ -43,6 +53,9 @@ export function computeDutyStatusFromDay(day) {
 
   let status;
   if (hasOpenSession) status = "open_session";
+  else if (afternoonComplete && !morningStarted) status = "half_day";
+  else if (morningComplete && !afternoonStarted && pmWindowHasPassed)
+    status = "half_day_am";
   else if (afternoonComplete) status = "completed";
   else if (hasAnyPunch) status = "partial";
   else status = "no_record";
@@ -62,6 +75,9 @@ export function getManilaDayNumber(date = new Date()) {
 
 export function hasCompleteSchedule(schedule) {
   return Boolean(
-    schedule?.amStart && schedule?.amEnd && schedule?.pmStart && schedule?.pmEnd,
+    schedule?.amStart &&
+    schedule?.amEnd &&
+    schedule?.pmStart &&
+    schedule?.pmEnd,
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Trash2, Pencil, MapPin, LoaderCircle } from "lucide-react";
+import { Plus, LoaderCircle } from "lucide-react";
 import {
   listAgencies,
   createAgency,
@@ -10,8 +10,10 @@ import {
 } from "../../services/adminApi";
 import ConfirmModal from "../../components/common/ConfirmModal";
 import LocationPicker from "../../components/admin/LocationPicker";
+import AgenciesTable from "../../components/admin/AgenciesTable";
 import Select from "../../components/common/Select";
 import { scrollBelowStickyHeader } from "../../utils/scroll";
+import TextInput from "../../components/common/TextInput";
 
 export default function Agencies() {
   const [agencies, setAgencies] = useState([]);
@@ -75,26 +77,26 @@ export default function Agencies() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8">
+    <div className="min-h-screen bg-bg-secondary px-4 py-8">
       <div className="max-w-5xl mx-auto">
         <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Agencies</h1>
-            <p className="text-sm text-slate-500">
+            <h1 className="text-2xl font-bold text-text-primary">Agencies</h1>
+            <p className="text-sm text-text-secondary">
               Manage OJT host agencies, geofence settings, and in-charge
               assignments.
             </p>
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center justify-center gap-2 bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue"
+            className="flex items-center justify-center gap-2 bg-brand text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand"
           >
             <Plus className="w-4 h-4" /> Add Agency
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2">
+          <div className="mb-4 rounded-lg bg-error-subtle border border-error-border text-error text-sm px-4 py-2">
             {error}
           </div>
         )}
@@ -134,163 +136,30 @@ export default function Agencies() {
           />
         )}
 
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-12 text-slate-400">
-              <LoaderCircle className="w-5 h-5 animate-spin" />
-            </div>
-          ) : agencies.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-sm">
-              No agencies yet. Add one to get started.
-            </div>
-          ) : (
-            <>
-              {/* Table view — tablet and up */}
-              <table className="hidden md:table w-full text-sm">
-                <thead className="bg-slate-50 text-slate-500 text-left">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Name</th>
-                    <th className="px-4 py-3 font-medium">Coordinates</th>
-                    <th className="px-4 py-3 font-medium">Radius</th>
-                    <th className="px-4 py-3 font-medium">Students</th>
-                    <th className="px-4 py-3 font-medium">In-Charge</th>
-                    <th className="px-4 py-3 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {agencies.map((a) => (
-                    <tr key={a.id}>
-                      <td className="px-4 py-3 font-medium text-slate-800">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-slate-400" />
-                          {a.name}
-                        </div>
-                        <div className="text-xs text-slate-400 mt-0.5">
-                          {a.address}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {a.latitude}, {a.longitude}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {a.radius_meters}m
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {a.student_count}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Select
-                          variant="plain"
-                          fullWidth={false}
-                          size="sm"
-                          value={a.in_charge_id || ""}
-                          onChange={(v) => handleInChargeChange(a.id, v)}
-                          options={inChargeOptions}
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          <button
-                            onClick={() => setEditingAgency(a)}
-                            className="text-slate-500 hover:text-slate-800"
-                            title="Edit agency"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeletingAgency(a)}
-                            className="text-red-500 hover:text-red-700"
-                            title="Delete agency"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Card view — mobile */}
-              <div className="md:hidden divide-y divide-slate-100">
-                {agencies.map((a) => (
-                  <div key={a.id} className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 font-medium text-slate-800">
-                          <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-                          <span className="truncate">{a.name}</span>
-                        </div>
-                        <p className="text-xs text-slate-400 mt-0.5 truncate">
-                          {a.address}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        <button
-                          onClick={() => setEditingAgency(a)}
-                          className="text-slate-500 hover:text-slate-800"
-                          title="Edit agency"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingAgency(a)}
-                          className="text-red-500 hover:text-red-700"
-                          title="Delete agency"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2 text-xs">
-                      <div className="min-w-0">
-                        <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
-                          Coordinates
-                        </p>
-                        <p className="text-slate-600 truncate">
-                          {a.latitude}, {a.longitude}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
-                          Radius
-                        </p>
-                        <p className="text-slate-600">{a.radius_meters}m</p>
-                      </div>
-                      <div>
-                        <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-0.5">
-                          Students
-                        </p>
-                        <p className="text-slate-600">{a.student_count}</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3">
-                      <p className="text-slate-400 text-[10px] uppercase tracking-wide mb-1">
-                        In-Charge
-                      </p>
-                      <Select
-                        variant="plain"
-                        size="sm"
-                        value={a.in_charge_id || ""}
-                        onChange={(v) => handleInChargeChange(a.id, v)}
-                        options={inChargeOptions}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center border border-border bg-bg-primary py-12 text-text-secondary shadow-card">
+            <LoaderCircle className="w-5 h-5 animate-spin" />
+          </div>
+        ) : agencies.length === 0 ? (
+          <div className="border border-border bg-bg-primary py-12 text-center text-sm text-text-secondary shadow-card">
+            No agencies yet. Add one to get started.
+          </div>
+        ) : (
+          <AgenciesTable
+            agencies={agencies}
+            inChargeOptions={inChargeOptions}
+            onInChargeChange={handleInChargeChange}
+            onEdit={setEditingAgency}
+            onDelete={setDeletingAgency}
+          />
+        )}
 
         {staff.length === 0 && !loading && (
-          <p className="text-xs text-slate-400 mt-3">
+          <p className="text-xs text-text-secondary mt-3">
             No in-charge accounts exist yet.{" "}
             <Link
               to="/admin/staff"
-              className="text-caap-blue hover:text-caap-navy underline"
+              className="text-text-primary hover:underline underline-offset-2"
             >
               Create one on the In-Charge Accounts page
             </Link>
@@ -301,7 +170,7 @@ export default function Agencies() {
         <div className="mt-3">
           <Link
             to="/admin/staff"
-            className="text-sm text-caap-blue hover:text-caap-navy underline"
+            className="text-sm text-text-primary hover:underline underline-offset-2"
           >
             Manage in-charge accounts →
           </Link>
@@ -378,9 +247,9 @@ function AgencyForm({ staff, agency, onClose, onCreated }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 space-y-4"
+      className="bg-bg-primary rounded-2xl border border-border p-6 mb-6 space-y-4"
     >
-      <h2 className="font-semibold text-slate-800">
+      <h2 className="font-semibold text-text-primary">
         {isEditing ? "Edit Agency" : "New Agency"}
       </h2>
 
@@ -438,20 +307,20 @@ function AgencyForm({ staff, agency, onClose, onCreated }) {
         />
       </div>
 
-      {error && <div className="text-sm text-red-600">{error}</div>}
+      {error && <div className="text-sm text-error">{error}</div>}
 
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={submitting}
-          className="bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue disabled:opacity-50"
+          className="bg-brand text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting ? "Saving…" : isEditing ? "Save Changes" : "Save Agency"}
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
+          className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary"
         >
           Cancel
         </button>
@@ -482,9 +351,9 @@ function RadiusSlider({ value, onChange }) {
   }
 
   return (
-    <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+    <div className="bg-bg-secondary rounded-xl border border-border p-4">
       <div className="flex items-center justify-between mb-1">
-        <label className="text-xs font-medium text-slate-600">
+        <label className="text-xs font-medium text-text-secondary">
           Geofence Radius
         </label>
         <div className="flex items-center gap-1">
@@ -495,9 +364,9 @@ function RadiusSlider({ value, onChange }) {
             value={value}
             onChange={handleNumberChange}
             onBlur={handleNumberBlur}
-            className="w-16 rounded-md border border-slate-300 px-1.5 py-0.5 text-sm text-right font-semibold text-caap-navy focus:outline-none focus:ring-2 focus:ring-caap-blue"
+            className="w-16 rounded-md border border-border px-1.5 py-2 text-sm text-right font-semibold text-text-primary transition-colors hover:border-border-hover focus:outline-none focus:ring-2 focus:ring-focus/30 focus:border-focus"
           />
-          <span className="text-xs text-slate-400">m</span>
+          <span className="text-xs text-text-secondary">m</span>
         </div>
       </div>
 
@@ -509,19 +378,19 @@ function RadiusSlider({ value, onChange }) {
           step={10}
           value={clamped}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="w-full h-2 rounded-full appearance-none bg-slate-200 accent-caap-navy cursor-pointer"
+          className="w-full h-2 rounded-full appearance-none bg-slate-200 accent-brand cursor-pointer"
           style={{
             background: `linear-gradient(to right, #0b2447 0%, #0b2447 ${percent}%, #e2e8f0 ${percent}%, #e2e8f0 100%)`,
           }}
         />
       </div>
 
-      <div className="flex justify-between text-[11px] text-slate-400 mt-1">
+      <div className="flex justify-between text-[11px] text-text-secondary mt-1">
         <span>{MIN}m</span>
         <span>{MAX}m</span>
       </div>
 
-      <p className="text-xs text-slate-400 mt-2">
+      <p className="text-xs text-text-secondary mt-2">
         Students must be within this distance of the pin to time in/out.
       </p>
     </div>
@@ -531,16 +400,15 @@ function RadiusSlider({ value, onChange }) {
 function Field({ label, value, onChange, required, type = "text", step }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-600 mb-1">
+      <label className="block text-xs font-medium text-text-secondary mb-1">
         {label}
       </label>
-      <input
+      <TextInput
         type={type}
         step={step}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
       />
     </div>
   );

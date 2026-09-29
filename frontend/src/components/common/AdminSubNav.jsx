@@ -43,9 +43,9 @@ export default function AdminSubNav() {
   return (
     <div
       ref={scrollContainerRef}
-      className="bg-caap-navy border-b border-slate-200 print:hidden overflow-x-auto"
+      className="bg-brand border-b border-border print:hidden overflow-x-auto"
     >
-      <div className="max-w-5xl mx-auto flex items-stretch text-xs text-white">
+      <div className="max-w-5xl mx-auto flex items-stretch text-xs text-text-inverse">
         {NAV_ITEMS.map((item, index) => {
           const Icon = item.icon;
           const active = isActivePath(pathname, item.to);
@@ -56,7 +56,7 @@ export default function AdminSubNav() {
               to={item.to}
               ref={active ? activeLinkRef : null}
               className={`relative flex items-center gap-1.5 whitespace-nowrap py-1.5 pl-4 pr-5 transition-colors ${
-                active ? "bg-caap-blue" : ""
+                active ? "bg-brand-secondary" : ""
               } ${index > 0 ? "-ml-2" : ""}`}
               style={{
                 clipPath:

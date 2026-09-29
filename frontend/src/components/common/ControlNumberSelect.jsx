@@ -1,4 +1,4 @@
-import Select from "./Select";
+import EntitySelect from "./EntitySelect";
 
 export default function ControlNumberSelect({
   id,
@@ -12,20 +12,19 @@ export default function ControlNumberSelect({
   helperText,
 }) {
   return (
-    <Select
+    <EntitySelect
       id={id}
       label={label}
       value={value}
       onChange={onChange}
+      items={controlNumbers}
+      getOptionValue={(cn) => cn.id}
+      getOptionLabel={(cn) => cn.control_number}
       required={required}
       disabled={disabled}
-      size={variant === "spacious" ? "md" : "sm"}
-      helperText={helperText}
+      variant={variant}
       placeholder={required ? "Select a control number" : "Unassigned"}
-      options={controlNumbers.map((cn) => ({
-        value: cn.id,
-        label: cn.control_number,
-      }))}
+      helperText={helperText}
     />
   );
 }

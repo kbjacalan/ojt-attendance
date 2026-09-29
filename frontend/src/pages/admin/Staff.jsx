@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, LoaderCircle, UserCog, Pencil, Trash2 } from "lucide-react";
+import { Plus, LoaderCircle } from "lucide-react";
 import {
   listStaff,
   createUser,
@@ -8,7 +8,12 @@ import {
   listAgencies,
 } from "../../services/adminApi";
 import ConfirmModal from "../../components/common/ConfirmModal";
+import StaffTable from "../../components/admin/StaffTable";
 import AgencySelect from "../../components/common/AgencySelect";
+import TextInput from "../../components/common/TextInput";
+import PasswordInput from "../../components/common/PasswordInput";
+
+const MIN_PASSWORD_LENGTH = 8;
 
 export default function Staff() {
   const [staff, setStaff] = useState([]);
@@ -52,31 +57,27 @@ export default function Staff() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-8">
+    <div className="min-h-screen bg-bg-secondary px-4 py-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="flex items-center gap-2">
-              <UserCog className="w-6 h-6 text-caap-blue" />
-              <h1 className="text-2xl font-bold text-slate-900">
-                In-Charge Accounts
-              </h1>
-            </div>
-            <p className="text-sm text-slate-500 mt-1">
-              Agency supervisors who review and certify their assigned students'
-              DTRs. Assign them to an agency from the Agencies page.
+            <h1 className="text-2xl font-bold text-text-primary">
+              In-Charge Accounts
+            </h1>
+            <p className="text-sm text-text-secondary mt-1">
+              Supervisors who review and certify their students' DTRs.
             </p>
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center justify-center gap-2 bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue shrink-0 whitespace-nowrap"
+            className="flex items-center justify-center gap-2 bg-brand text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand shrink-0 whitespace-nowrap"
           >
             <Plus className="w-4 h-4" /> Add In-Charge
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-2">
+          <div className="mb-4 rounded-lg bg-error-subtle border border-error-border text-error text-sm px-4 py-2">
             {error}
           </div>
         )}
@@ -114,100 +115,21 @@ export default function Staff() {
           />
         )}
 
-        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center py-12 text-slate-400">
-              <LoaderCircle className="w-5 h-5 animate-spin" />
-            </div>
-          ) : staff.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-sm">
-              No in-charge accounts yet. Add one to get started.
-            </div>
-          ) : (
-            <>
-              {/* Table view — tablet and up */}
-              <table className="hidden md:table w-full text-sm">
-                <thead className="bg-slate-50 text-slate-500 text-left">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Name</th>
-                    <th className="px-4 py-3 font-medium">Email</th>
-                    <th className="px-4 py-3 font-medium">Assigned Agency</th>
-                    <th className="px-4 py-3 font-medium"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {staff.map((s) => (
-                    <tr key={s.id}>
-                      <td className="px-4 py-3 font-medium text-slate-800">
-                        {s.full_name}
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">{s.email}</td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {s.agency_names || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          <button
-                            onClick={() => setEditingStaff(s)}
-                            className="text-slate-500 hover:text-slate-800"
-                            title="Edit"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeletingStaff(s)}
-                            className="text-red-500 hover:text-red-700"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Card view — mobile */}
-              <div className="md:hidden divide-y divide-slate-100">
-                {staff.map((s) => (
-                  <div
-                    key={s.id}
-                    className="p-4 flex items-start justify-between gap-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium text-slate-800 truncate">
-                        {s.full_name}
-                      </p>
-                      <p className="text-xs text-slate-500 truncate">
-                        {s.email}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Agency: {s.agency_names || "—"}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <button
-                        onClick={() => setEditingStaff(s)}
-                        className="text-slate-500 hover:text-slate-800"
-                        title="Edit"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => setDeletingStaff(s)}
-                        className="text-red-500 hover:text-red-700"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center border border-border bg-bg-primary py-12 text-text-secondary shadow-card">
+            <LoaderCircle className="w-5 h-5 animate-spin" />
+          </div>
+        ) : staff.length === 0 ? (
+          <div className="border border-border bg-bg-primary py-12 text-center text-sm text-text-secondary shadow-card">
+            No in-charge accounts yet. Add one to get started.
+          </div>
+        ) : (
+          <StaffTable
+            staff={staff}
+            onEdit={setEditingStaff}
+            onDelete={setDeletingStaff}
+          />
+        )}
       </div>
     </div>
   );
@@ -240,6 +162,9 @@ function StaffForm({ staffMember, agencies, onClose, onCreated }) {
           fullName: form.fullName,
           email: form.email,
         };
+        if (form.password) {
+          payload.password = form.password;
+        }
         if (form.agencyId !== initialAgencyId) {
           payload.agencyId = form.agencyId || null;
         }
@@ -264,9 +189,9 @@ function StaffForm({ staffMember, agencies, onClose, onCreated }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 space-y-4"
+      className="bg-bg-primary rounded-2xl border border-border p-6 mb-6 space-y-4"
     >
-      <h2 className="font-semibold text-slate-800">
+      <h2 className="font-semibold text-text-primary">
         {isEditing ? "Edit In-Charge Account" : "New In-Charge Account"}
       </h2>
 
@@ -284,15 +209,16 @@ function StaffForm({ staffMember, agencies, onClose, onCreated }) {
           required
           type="email"
         />
-        {!isEditing && (
-          <Field
-            label="Password"
-            value={form.password}
-            onChange={(v) => setForm({ ...form, password: v })}
-            required
-            type="password"
-          />
-        )}
+        <Field
+          label={isEditing ? "New Password" : "Password"}
+          value={form.password}
+          onChange={(v) => setForm({ ...form, password: v })}
+          required={!isEditing}
+          type="password"
+          minLength={MIN_PASSWORD_LENGTH}
+          autoComplete="new-password"
+          placeholder={isEditing ? "Leave blank to keep current" : undefined}
+        />
         <AgencySelect
           id="staff-agency"
           value={form.agencyId}
@@ -302,21 +228,21 @@ function StaffForm({ staffMember, agencies, onClose, onCreated }) {
       </div>
 
       {isEditing && (
-        <p className="text-xs text-slate-400">
-          Password changes aren't supported here yet — the account holder would
-          need a separate reset flow. If this in-charge supervises more than
-          one agency, only their first assignment is shown above; changing it
-          here only applies if you actually pick a different agency.
+        <p className="text-xs text-text-secondary">
+          Leave the password blank to keep the current one. If this in-charge
+          supervises more than one agency, only their first assignment is shown
+          above; changing it here only applies if you actually pick a different
+          agency.
         </p>
       )}
 
-      {error && <div className="text-sm text-red-600">{error}</div>}
+      {error && <div className="text-sm text-error">{error}</div>}
 
       <div className="flex gap-2">
         <button
           type="submit"
           disabled={submitting}
-          className="bg-caap-navy text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-caap-blue disabled:opacity-50"
+          className="bg-brand text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {submitting
             ? "Saving…"
@@ -327,7 +253,7 @@ function StaffForm({ staffMember, agencies, onClose, onCreated }) {
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-100"
+          className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:bg-bg-secondary"
         >
           Cancel
         </button>
@@ -336,18 +262,18 @@ function StaffForm({ staffMember, agencies, onClose, onCreated }) {
   );
 }
 
-function Field({ label, value, onChange, required, type = "text" }) {
+function Field({ label, value, onChange, type = "text", ...props }) {
+  const Input = type === "password" ? PasswordInput : TextInput;
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-600 mb-1">
+      <label className="block text-xs font-medium text-text-secondary mb-1">
         {label}
       </label>
-      <input
+      <Input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        required={required}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
+        {...props}
       />
     </div>
   );

@@ -1,20 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  LogIn,
-  LogOut,
-  LoaderCircle,
   AlertTriangle,
   CheckCircle2,
   Circle,
+  CircleDot,
   Clock,
-  ShieldAlert,
   Info,
+  LoaderCircle,
+  LogIn,
+  LogOut,
+  ShieldAlert,
+  Timer,
+  XCircle,
 } from "lucide-react";
 import { useGeolocation } from "../../hooks/useGeolocation";
 import { timeIn, timeOut } from "../../services/api";
 import GeolocationStatus from "./GeolocationStatus";
 import ConfirmModal from "../common/ConfirmModal";
 import { hasCompleteSchedule } from "../../utils/dutyStatusFromDay";
+import { getManilaMinutesSinceMidnight } from "../../utils/manilaDate";
+import { minutesFromHHMM } from "../../utils/officialHours";
+import { to12Hour } from "../../utils/formatTime";
 
 const PERIOD_OPTIONS = [
   {
@@ -47,10 +53,6 @@ const OT_OPTION = {
   endKey: "otEnd",
 };
 
-// Overtime only becomes a real "period" on days the student has an
-// approved ot_requests window — Attendance.jsx only puts otStart/otEnd
-// on the schedule object once that's true, so this doubles as the
-// "is OT active today" check everywhere in this file.
 function hasApprovedOvertimeToday(schedule) {
   return Boolean(schedule?.otStart && schedule?.otEnd);
 }
@@ -61,13 +63,10 @@ function getPeriodOptions(schedule) {
     : PERIOD_OPTIONS;
 }
 
-function to12Hour(time24) {
-  if (!time24) return "";
-  const [hStr, mStr] = time24.split(":");
-  let h = parseInt(hStr, 10);
-  const period = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-  return `${h}:${mStr} ${period}`;
+function periodHasEnded(opt, schedule) {
+  const endTime = schedule?.[opt.endKey];
+  if (!endTime) return false;
+  return getManilaMinutesSinceMidnight() > minutesFromHHMM(endTime);
 }
 
 function resolveSuggestion(todayDay, schedule) {
@@ -80,6 +79,7 @@ function resolveSuggestion(todayDay, schedule) {
     const opt = periodOptions.find((o) => o.value === value);
     const inTime = todayDay?.[opt.inKey] || "";
     const outTime = todayDay?.[opt.outKey] || "";
+    if (!inTime && periodHasEnded(opt, schedule)) continue;
     if (!inTime) return { period: value, action: "in" };
     if (!outTime) return { period: value, action: "out" };
   }
@@ -87,10 +87,18 @@ function resolveSuggestion(todayDay, schedule) {
   return { period: order[order.length - 1], action: null };
 }
 
+function resolveActionForPeriod(opt, todayDay) {
+  const inTime = todayDay?.[opt.inKey] || "";
+  const outTime = todayDay?.[opt.outKey] || "";
+  if (!inTime) return "in";
+  if (!outTime) return "out";
+  return null;
+}
+
 function FirstTimeNotice({ agencyName }) {
   return (
-    <div className="flex items-start gap-2 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 text-sm mb-3">
-      <Info className="w-4 h-4 shrink-0 mt-0.5" />
+    <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-info-border bg-info-subtle px-3.5 py-3 text-sm text-info">
+      <Info className="mt-0.5 h-4 w-4 shrink-0" />
       <span>
         You&apos;ve been assigned to {agencyName || "your agency"}. Your
         attendance tracking starts once you time in.
@@ -101,11 +109,13 @@ function FirstTimeNotice({ agencyName }) {
 
 function ScheduleIncompleteNotice() {
   return (
-    <div className="flex items-start gap-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3.5 mb-3">
-      <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+    <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-error-border bg-error-subtle px-3.5 py-3 text-error">
+      <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0" />
       <div className="text-sm">
-        <p className="font-medium">Your official hours haven&apos;t been set.</p>
-        <p className="mt-1 text-[13px] text-red-600/90">
+        <p className="font-medium">
+          Your official hours haven&apos;t been set.
+        </p>
+        <p className="mt-1 text-[13px] opacity-90">
           Please contact your agency in-charge or the OJT admin so they can
           complete your profile before you can time in or out.
         </p>
@@ -123,54 +133,86 @@ function derivePeriodStatus(opt, todayDay) {
   return { state: "pending", inTime, outTime };
 }
 
-const STATUS_STYLES = {
+const STATUS_META = {
   done: {
     icon: CheckCircle2,
-    className: "bg-emerald-50 border-emerald-200 text-emerald-700",
+    iconClassName: "text-success",
   },
   active: {
     icon: Clock,
-    className: "bg-blue-50 border-blue-200 text-blue-700",
+    iconClassName: "text-info",
   },
   pending: {
     icon: Circle,
-    className: "bg-slate-50 border-slate-200 text-slate-400",
+    iconClassName: "text-text-secondary",
   },
 };
 
-function periodStatusLabel({ state, inTime, outTime }) {
-  if (state === "done") return `${to12Hour(inTime)}–${to12Hour(outTime)}`;
-  if (state === "active") return `Since ${to12Hour(inTime)}`;
-  return "Not yet";
-}
+function TodayShiftsStrip({
+  todayDay,
+  periodOptions,
+  selectedPeriod,
+  onSelectPeriod,
+}) {
+  const tabRefs = useRef([]);
 
-function TodayShiftsStrip({ todayDay, periodOptions }) {
-  const hasThree = periodOptions.length === 3;
+  function focusTab(index) {
+    const opt = periodOptions[index];
+    onSelectPeriod(opt.value);
+    tabRefs.current[index]?.focus();
+  }
+
+  function handleKeyDown(e, index) {
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      focusTab((index + 1) % periodOptions.length);
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      focusTab((index - 1 + periodOptions.length) % periodOptions.length);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      focusTab(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      focusTab(periodOptions.length - 1);
+    }
+  }
+
   return (
-    <div className="grid grid-cols-2 gap-2 mb-4">
-      {periodOptions.map((opt, i) => {
+    <div
+      role="tablist"
+      aria-label="Shift period"
+      className="mb-4 flex items-stretch gap-2"
+    >
+      {periodOptions.map((opt, index) => {
         const status = derivePeriodStatus(opt, todayDay);
-        const { icon: Icon, className } = STATUS_STYLES[status.state];
-        // AM/PM sit side by side; with a third period (OT) it spans
-        // the full width below them, at every screen size.
-        const isOverflowItem = hasThree && i === periodOptions.length - 1;
+        const { icon: Icon, iconClassName } = STATUS_META[status.state];
+        const isSelected = opt.value === selectedPeriod;
         return (
-          <div
+          <button
+            type="button"
             key={opt.value}
-            className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${className} ${
-              isOverflowItem ? "col-span-2" : ""
+            ref={(el) => (tabRefs.current[index] = el)}
+            role="tab"
+            id={`shift-tab-${opt.value}`}
+            aria-selected={isSelected}
+            aria-controls={`shift-panel-${opt.value}`}
+            tabIndex={isSelected ? 0 : -1}
+            onClick={() => onSelectPeriod(opt.value)}
+            onKeyDown={(e) => handleKeyDown(e, index)}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl border px-1 py-2.5 text-center transition-colors motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/40 ${
+              isSelected
+                ? "border-focus bg-brand/5 text-text-primary"
+                : "border-border bg-bg-primary text-text-secondary hover:border-border-hover hover:text-text-primary"
             }`}
           >
-            <Icon className="w-4 h-4 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wide leading-none">
-                {opt.name}
-              </p>
-              <p className="text-xs mt-0.5 truncate">
-                {periodStatusLabel(status)}
-              </p>
-            </div>
-          </div>
+            <span className="flex items-center justify-center gap-1 min-w-0 w-full">
+              <Icon className={`w-3.5 h-3.5 shrink-0 ${iconClassName}`} />
+              <span className="text-sm font-semibold uppercase tracking-wide truncate">
+                {opt.label}
+              </span>
+            </span>
+          </button>
         );
       })}
     </div>
@@ -192,6 +234,7 @@ export default function TimeInOutButton({
   const [submitting, setSubmitting] = useState(null);
   const [result, setResult] = useState(null);
   const [pendingPunch, setPendingPunch] = useState(null);
+  const [manualPeriod, setManualPeriod] = useState(null);
   const resultRef = useRef(null);
 
   const scheduleComplete = isUnassigned || hasCompleteSchedule(schedule);
@@ -199,6 +242,13 @@ export default function TimeInOutButton({
   const suggestion = resolveSuggestion(todayDay, schedule);
   const isLocked =
     submitting !== null || Boolean(disabledReason) || !scheduleComplete;
+
+  const selectedPeriod =
+    manualPeriod && periodOptions.some((o) => o.value === manualPeriod)
+      ? manualPeriod
+      : suggestion.period;
+  const selectedOpt = periodOptions.find((o) => o.value === selectedPeriod);
+  const selectedAction = resolveActionForPeriod(selectedOpt, todayDay);
 
   useEffect(() => {
     if (result && resultRef.current) {
@@ -232,16 +282,14 @@ export default function TimeInOutButton({
     }
   }
 
-  const opt = periodOptions.find((o) => o.value === suggestion.period);
-
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    <div className="rounded-2xl border border-border bg-bg-primary p-4 shadow-card sm:p-5">
       {pendingPunch && (
         <ConfirmModal
           title={
             pendingPunch === "in"
-              ? `Time in for ${opt.name}?`
-              : `Time out for ${opt.name}?`
+              ? `Time in for ${selectedOpt.name}?`
+              : `Time out for ${selectedOpt.name}?`
           }
           message={
             pendingPunch === "in"
@@ -252,22 +300,39 @@ export default function TimeInOutButton({
           danger={false}
           onConfirm={() => {
             setPendingPunch(null);
-            handlePunch(pendingPunch, suggestion.period);
+            handlePunch(pendingPunch, selectedOpt.value);
           }}
           onCancel={() => setPendingPunch(null)}
         />
       )}
 
-      <h2 className="text-lg font-semibold text-slate-800 mb-1">Attendance</h2>
-      <p className="text-sm text-slate-500 mb-4">
-        You must be within your agency premises to time in or out.
-      </p>
+      <div className="mb-4 flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-text-primary ring-1 ring-border"
+        >
+          <Timer className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-text-primary">
+            Attendance
+          </h2>
+          <p className="text-xs text-text-secondary">
+            Be within your agency premises to time in or out.
+          </p>
+        </div>
+      </div>
 
-      <TodayShiftsStrip todayDay={todayDay} periodOptions={periodOptions} />
+      <TodayShiftsStrip
+        todayDay={todayDay}
+        periodOptions={periodOptions}
+        selectedPeriod={selectedPeriod}
+        onSelectPeriod={setManualPeriod}
+      />
 
       {disabledReason && (
-        <div className="mb-4 flex items-start gap-2 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 text-sm">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+        <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-warning-border bg-warning-subtle px-3.5 py-3 text-sm text-warning">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{disabledReason}</span>
         </div>
       )}
@@ -277,14 +342,21 @@ export default function TimeInOutButton({
         <FirstTimeNotice agencyName={agencyName} />
       )}
 
-      <SuggestedAction
-        suggestion={suggestion}
-        todayDay={todayDay}
-        periodOptions={periodOptions}
-        isLocked={isLocked}
-        submitting={submitting}
-        onPunch={(type) => setPendingPunch(type)}
-      />
+      <div
+        role="tabpanel"
+        id={`shift-panel-${selectedOpt.value}`}
+        aria-labelledby={`shift-tab-${selectedOpt.value}`}
+      >
+        <SelectedPeriodAction
+          selectedOpt={selectedOpt}
+          action={selectedAction}
+          todayDay={todayDay}
+          schedule={schedule}
+          isLocked={isLocked}
+          submitting={submitting}
+          onPunch={(type) => setPendingPunch(type)}
+        />
+      </div>
 
       <GeolocationStatus
         status={status}
@@ -298,75 +370,105 @@ export default function TimeInOutButton({
           ref={resultRef}
           role={result.type === "error" ? "alert" : "status"}
           aria-live={result.type === "error" ? "assertive" : "polite"}
-          className={`mt-4 rounded-lg px-4 py-3 text-sm ${
+          className={`mt-4 flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm ${
             result.type === "success"
-              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-              : "bg-red-50 text-red-700 border border-red-200"
+              ? "border-success-border bg-success-subtle text-success"
+              : "border-error-border bg-error-subtle text-error"
           }`}
         >
-          {result.message}
+          {result.type === "success" ? (
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          ) : (
+            <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          )}
+          <span>{result.message}</span>
         </div>
       )}
     </div>
   );
 }
 
-function SuggestedAction({
-  suggestion,
+function PunchTime({ label, time }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-border bg-bg-primary px-3 py-2">
+      <p className="text-[11px] font-medium text-text-secondary">{label}</p>
+      <p
+        className={`text-sm font-semibold tabular-nums ${
+          time ? "text-text-primary" : "text-text-secondary"
+        }`}
+      >
+        {time ? to12Hour(time) : "Not yet"}
+      </p>
+    </div>
+  );
+}
+
+function SelectedPeriodAction({
+  selectedOpt,
+  action,
   todayDay,
-  periodOptions,
+  schedule,
   isLocked,
   submitting,
   onPunch,
 }) {
-  if (!suggestion.action) {
-    return (
-      <div className="flex items-center gap-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3.5 mb-1 text-sm font-medium">
-        <CheckCircle2 className="w-5 h-5 shrink-0" />
-        {periodOptions.length === 3
-          ? "You've completed all your shifts for today, including overtime. Nice work!"
-          : "You've completed both shifts for today. Nice work!"}
-      </div>
-    );
-  }
+  const inTime = todayDay?.[selectedOpt.inKey] || "";
+  const outTime = todayDay?.[selectedOpt.outKey] || "";
+  const isDone = action === null;
+  const isTimeIn = action === "in";
+  const startTime = schedule?.[selectedOpt.startKey];
+  const endTime = schedule?.[selectedOpt.endKey];
 
-  const opt = periodOptions.find((o) => o.value === suggestion.period);
-  const inTime = todayDay?.[opt.inKey] || "";
-  const isTimeIn = suggestion.action === "in";
+  const pillClass = isTimeIn
+    ? "border-border bg-bg-primary text-text-secondary"
+    : "border-success-border bg-success-subtle text-success";
 
   return (
     <>
-      <p className="text-xs font-medium text-slate-400 mb-1.5 uppercase tracking-wide">
-        {opt.name} shift
-      </p>
-      {isTimeIn ? (
-        <p className="text-[11px] text-slate-400 mb-3">
-          You haven't timed in for the {opt.label} period yet.
-        </p>
-      ) : (
-        <p className="text-[11px] text-slate-400 mb-3">
-          Timed in at {to12Hour(inTime)}. Not yet timed out.
-        </p>
-      )}
+      <div className="rounded-xl border border-border bg-bg-secondary p-3.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-text-secondary">
+              {selectedOpt.name} shift
+            </p>
+            {startTime && endTime && (
+              <p className="text-sm font-semibold tabular-nums text-text-primary">
+                {to12Hour(startTime)} – {to12Hour(endTime)}
+              </p>
+            )}
+          </div>
+          <span
+            className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${pillClass}`}
+          >
+            {isDone && <CheckCircle2 className="h-3 w-3" />}
+            {!isDone && !isTimeIn && <CircleDot className="h-3 w-3" />}
+            {isDone ? "Completed" : isTimeIn ? "Not timed in" : "On duty"}
+          </span>
+        </div>
 
-      <button
-        onClick={() => onPunch(suggestion.action)}
-        disabled={isLocked}
-        className={`w-full flex items-center justify-center gap-2 rounded-xl text-white font-medium py-3.5 px-4 disabled:opacity-40 disabled:cursor-not-allowed transition-colors ${
-          isTimeIn
-            ? "bg-caap-navy hover:bg-caap-blue"
-            : "bg-slate-800 hover:bg-slate-900"
-        }`}
-      >
-        {submitting === suggestion.action ? (
-          <LoaderCircle className="w-5 h-5 animate-spin" />
-        ) : isTimeIn ? (
-          <LogIn className="w-5 h-5" />
-        ) : (
-          <LogOut className="w-5 h-5" />
-        )}
-        {isTimeIn ? "Time In" : "Time Out"} ({opt.label})
-      </button>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <PunchTime label="Time in" time={inTime} />
+          <PunchTime label="Time out" time={outTime} />
+        </div>
+      </div>
+
+      {!isDone && (
+        <button
+          type="button"
+          onClick={() => onPunch(action)}
+          disabled={isLocked}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3.5 font-medium text-text-inverse shadow-card transition-colors hover:bg-brand-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-brand motion-reduce:transition-none"
+        >
+          {submitting !== null && submitting === action ? (
+            <LoaderCircle className="h-5 w-5 animate-spin" />
+          ) : isTimeIn ? (
+            <LogIn className="h-5 w-5" />
+          ) : (
+            <LogOut className="h-5 w-5" />
+          )}
+          {`${isTimeIn ? "Time In" : "Time Out"} (${selectedOpt.label})`}
+        </button>
+      )}
     </>
   );
 }

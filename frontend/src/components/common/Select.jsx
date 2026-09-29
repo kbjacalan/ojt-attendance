@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 
 const SIZE_STYLES = {
-  sm: "py-1.5 pl-2.5 pr-7 text-xs sm:text-sm sm:pl-3 sm:pr-8",
+  sm: "py-2 pl-2.5 pr-7 text-xs sm:text-sm sm:pl-3 sm:pr-8",
   md: "py-2 pl-3 pr-9 text-sm",
 };
 
@@ -45,12 +45,12 @@ export default function Select({
         onChange={(e) => onChange(e.target.value)}
         required={required}
         disabled={disabled}
-        className={`${fullWidth ? "w-full" : ""} appearance-none truncate rounded-lg border bg-white transition-colors focus:outline-none focus:ring-2 focus:ring-caap-blue/30 focus:border-caap-blue disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400 ${SIZE_STYLES[size]} ${
+        className={`${fullWidth ? "w-full" : ""} appearance-none truncate rounded-lg border bg-bg-primary transition-colors focus:outline-none focus:ring-2 focus:ring-focus/30 focus:border-focus disabled:cursor-not-allowed disabled:border-border disabled:hover:border-border disabled:bg-bg-secondary disabled:text-text-secondary ${SIZE_STYLES[size]} ${
           isFilter
             ? isActive
-              ? "border-caap-blue text-caap-navy bg-caap-blue/5 font-medium"
-              : "border-slate-300 text-slate-600 hover:border-slate-400"
-            : "border-slate-300 text-slate-700 hover:border-slate-400"
+              ? "border-focus text-text-primary bg-brand/5 font-medium"
+              : "border-border text-text-secondary hover:border-border-hover"
+            : "border-border text-text-primary hover:border-border-hover"
         }`}
       >
         {isFilter && <option value="all">{label}: All</option>}
@@ -66,7 +66,7 @@ export default function Select({
         ))}
       </select>
       <ChevronDown
-        className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 sm:right-2.5 ${CHEVRON_SIZE[size]}`}
+        className={`pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary sm:right-2.5 ${CHEVRON_SIZE[size]}`}
       />
     </div>
   );
@@ -85,25 +85,25 @@ export default function Select({
           htmlFor={id}
           className={
             isSpacious
-              ? "block text-sm font-medium text-slate-700 mb-1"
-              : "block text-xs font-medium text-slate-600 mb-1"
+              ? "block text-sm font-medium text-text-primary mb-1"
+              : "block text-xs font-medium text-text-secondary mb-1"
           }
         >
           {label}
           {!required && isSpacious && (
-            <span className="text-slate-400 font-normal"> (optional)</span>
+            <span className="text-text-secondary font-normal"> (optional)</span>
           )}
         </label>
       )}
 
       {isSpacious && helperText && (
-        <p className="text-xs text-slate-400 mb-2">{helperText}</p>
+        <p className="text-xs text-text-secondary mb-2">{helperText}</p>
       )}
 
       {control}
 
       {!isSpacious && helperText && (
-        <p className="text-[11px] text-slate-400 mt-1">{helperText}</p>
+        <p className="text-[11px] text-text-secondary mt-1">{helperText}</p>
       )}
     </div>
   );

@@ -2,24 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Search, LoaderCircle, Crosshair } from "lucide-react";
-
-// Custom navy pin (matches the agency marker used on the student
-// Attendance page's live map) — replaces Leaflet's default blue
-// marker+shadow images for a consistent look across the app, and
-// sidesteps the usual Vite asset-path workaround entirely.
-const AGENCY_ICON = L.divIcon({
-  className: "",
-  html: `
-    <div class="relative flex items-center justify-center">
-      <div class="w-8 h-8 rounded-full bg-caap-navy border-2 border-white shadow-md flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
-      </div>
-      <div class="absolute -bottom-1 w-2 h-2 rotate-45 bg-caap-navy"></div>
-    </div>
-  `,
-  iconSize: [32, 36],
-  iconAnchor: [16, 34],
-});
+import { AGENCY_ICON } from "../map/agencyIcon";
+import TextInput from "../common/TextInput";
 
 // Falls back to CAAP Dipolog Airport if no coordinates are set yet
 const DEFAULT_CENTER = [8.6005, 123.3432];
@@ -240,21 +224,20 @@ export default function LocationPicker({
           doc comment above about nested forms. */}
       <div className="flex gap-2 mb-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
+          <TextInput
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleSearchKeyDown}
             placeholder="Search for a place (e.g. CAAP Dipolog Airport)"
-            className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue"
+            iconLeft={<Search className="w-4 h-4" />}
           />
         </div>
         <button
           type="button"
           onClick={runSearch}
           disabled={searching}
-          className="flex items-center gap-1.5 bg-caap-navy text-white px-3 py-2 rounded-lg text-sm hover:bg-caap-blue disabled:opacity-50 shrink-0"
+          className="flex items-center gap-1.5 bg-brand text-text-inverse px-3 py-2 rounded-lg text-sm hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
         >
           {searching ? (
             <LoaderCircle className="w-4 h-4 animate-spin" />
@@ -265,22 +248,22 @@ export default function LocationPicker({
       </div>
 
       {searchError && (
-        <p className="text-xs text-red-600 mb-2">{searchError}</p>
+        <p className="text-xs text-error mb-2">{searchError}</p>
       )}
 
       <div className="relative isolate">
         <div
           ref={mapContainerRef}
-          className="w-full h-80 rounded-xl border border-slate-300"
+          className="w-full h-80 rounded-xl border border-border"
         />
 
         {/* Live coordinates + radius readout */}
         {isValidCoord(latitude) && isValidCoord(longitude) && (
-          <div className="absolute top-2 left-2 z-[500] bg-white/95 backdrop-blur rounded-lg shadow-sm border border-slate-200 px-2.5 py-1.5 text-[11px] text-slate-600 font-mono leading-tight">
+          <div className="absolute top-2 left-2 z-[500] bg-bg-primary/95 backdrop-blur rounded-lg shadow-sm border border-border px-2.5 py-1.5 text-[11px] text-text-secondary font-mono leading-tight">
             <div>
               {latitude.toFixed(6)}, {longitude.toFixed(6)}
             </div>
-            <div className="text-caap-navy font-semibold">
+            <div className="text-text-primary font-semibold">
               Radius: {radiusMeters || 0}m
             </div>
           </div>
@@ -290,14 +273,14 @@ export default function LocationPicker({
         <button
           type="button"
           onClick={recenter}
-          className="absolute bottom-4 left-3 z-[500] bg-white rounded-full shadow-md p-2 text-caap-navy hover:bg-slate-50 active:scale-95 transition-transform"
+          className="absolute bottom-4 left-3 z-[500] bg-bg-primary rounded-full shadow-md p-2 text-text-primary hover:bg-bg-secondary active:scale-95 transition-transform"
           title="Recenter on the pin"
         >
           <Crosshair className="w-4 h-4" />
         </button>
       </div>
 
-      <p className="text-xs text-slate-400 mt-1.5">
+      <p className="text-xs text-text-secondary mt-1.5">
         Search, click on the map, or drag the pin to set the exact location. The
         shaded circle shows the geofence students must be inside to time in/out.
         Name and address auto-fill below — feel free to edit them.

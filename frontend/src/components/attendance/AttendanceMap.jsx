@@ -3,30 +3,17 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { LocateFixed, LoaderCircle, AlertTriangle } from "lucide-react";
 import { isWithinGeofence } from "../../utils/geo";
+import { AGENCY_ICON } from "../map/agencyIcon";
 
 const DEFAULT_CENTER = [8.6005, 123.3432]; // CAAP Dipolog Airport fallback
 const DEFAULT_ZOOM = 16;
-
-const AGENCY_ICON = L.divIcon({
-  className: "",
-  html: `
-    <div class="relative flex items-center justify-center">
-      <div class="w-8 h-8 rounded-full bg-caap-navy border-2 border-white shadow-md flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
-      </div>
-      <div class="absolute -bottom-1 w-2 h-2 rotate-45 bg-caap-navy"></div>
-    </div>
-  `,
-  iconSize: [32, 36],
-  iconAnchor: [16, 34],
-});
 
 const USER_ICON = L.divIcon({
   className: "",
   html: `
     <div class="relative flex items-center justify-center w-6 h-6">
-      <div class="gps-pulse-ring absolute w-6 h-6 rounded-full bg-caap-blue/40"></div>
-      <div class="relative w-3.5 h-3.5 rounded-full bg-caap-blue border-2 border-white shadow"></div>
+      <div class="gps-pulse-ring absolute w-6 h-6 rounded-full bg-brand/40"></div>
+      <div class="relative w-3.5 h-3.5 rounded-full bg-brand border-2 border-white shadow"></div>
     </div>
   `,
   iconSize: [24, 24],
@@ -183,7 +170,7 @@ export default function AttendanceMap({
       {!agencyLoading && !agencyError && (
         <button
           onClick={recenter}
-          className="absolute bottom-[var(--attendance-control-clearance)] left-4 z-[1000] bg-white rounded-full shadow-md p-2.5 text-caap-navy hover:bg-slate-50 active:scale-95 transition-transform"
+          className="absolute bottom-[var(--attendance-control-clearance)] left-4 z-[1000] bg-bg-primary rounded-full shadow-md p-2.5 text-text-primary hover:bg-bg-secondary active:scale-95 transition-transform"
           aria-label="Recenter map on my location"
         >
           <LocateFixed className="w-5 h-5" />
@@ -192,7 +179,7 @@ export default function AttendanceMap({
 
       {/* Loading state */}
       {agencyLoading && (
-        <div className="absolute inset-0 bg-slate-100 flex items-center justify-center gap-2 text-slate-500 text-sm">
+        <div className="absolute inset-0 bg-bg-secondary flex items-center justify-center gap-2 text-text-secondary text-sm">
           <LoaderCircle className="w-4 h-4 animate-spin" />
           Loading map…
         </div>
@@ -200,8 +187,8 @@ export default function AttendanceMap({
 
       {/* Agency load error (e.g. unassigned) */}
       {!agencyLoading && agencyError && (
-        <div className="absolute inset-0 bg-slate-100 flex items-center justify-center px-6 text-center">
-          <div className="flex flex-col items-center gap-2 text-slate-500 text-sm">
+        <div className="absolute inset-0 bg-bg-secondary flex items-center justify-center px-6 text-center">
+          <div className="flex flex-col items-center gap-2 text-text-secondary text-sm">
             <AlertTriangle className="w-5 h-5 text-amber-500" />
             {agencyError}
           </div>
@@ -210,9 +197,9 @@ export default function AttendanceMap({
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[900]">
         <div className="bg-gradient-to-b from-black/55 to-transparent pt-4">
-          <div className="max-w-md mx-auto px-4 text-white">
+          <div className="max-w-md mx-auto px-4 text-text-inverse">
             <h1 className="text-lg font-bold drop-shadow-sm">{greetingLine}</h1>
-            <p className="text-xs text-white/80 mt-0.5">{dateTimeLine}</p>
+            <p className="text-xs text-text-inverse/80 mt-0.5">{dateTimeLine}</p>
           </div>
         </div>
 
@@ -224,13 +211,13 @@ export default function AttendanceMap({
                 <div
                   className={`flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border ${
                     geofence.withinRadius
-                      ? "bg-emerald-50/95 text-emerald-700 border-emerald-200"
-                      : "bg-amber-50/95 text-amber-700 border-amber-200"
+                      ? "bg-success-subtle/95 text-success border-success-border"
+                      : "bg-warning-subtle/95 text-warning border-warning-border"
                   }`}
                 >
                   <span
                     className={`w-2 h-2 rounded-full ${
-                      geofence.withinRadius ? "bg-emerald-500" : "bg-amber-500"
+                      geofence.withinRadius ? "bg-success-subtle0" : "bg-warning-subtle0"
                     }`}
                   />
                   {geofence.withinRadius
@@ -238,12 +225,12 @@ export default function AttendanceMap({
                     : `${geofence.distanceMeters}m away, move closer to time in/out`}
                 </div>
               ) : locationError ? (
-                <div className="flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border bg-red-50/95 text-red-700 border-red-200">
+                <div className="flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border bg-error-subtle/95 text-error border-error-border">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
                   {locationError}
                 </div>
               ) : (
-                <div className="flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border bg-white/95 text-slate-500 border-slate-200">
+                <div className="flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium shadow-md border bg-bg-primary/95 text-text-secondary border-border">
                   <LoaderCircle className="w-3.5 h-3.5 animate-spin" />
                   Finding your location…
                 </div>

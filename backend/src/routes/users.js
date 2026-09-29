@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { authenticate, requireRole } = require("../middleware/authenticate");
+const { asyncHandler } = require("../middleware/errorHandler");
 const {
   createUser,
   listStudents,
@@ -12,103 +13,120 @@ const {
   setUserActiveStatus,
   updateStaffAccount,
   deleteStaffAccount,
-  UserError,
 } = require("../services/userService");
+const { isDateString } = require("../utils/validators");
+const {
+  validateBatchField,
+  validateRequiredHoursField,
+} = require("../utils/studentPayload");
 
 router.use(authenticate, requireRole("admin"));
 
-router.get("/students", async (req, res) => {
-  const { date } = req.query;
-  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return res
-      .status(400)
-      .json({ error: "date must be in YYYY-MM-DD format." });
-  }
-  try {
+router.get(
+  "/students",
+  asyncHandler(async (req, res) => {
+    const { date } = req.query;
+    if (date && !isDateString(date)) {
+      return res
+        .status(400)
+        .json({ error: "date must be in YYYY-MM-DD format." });
+    }
     const students = await listStudents(date);
     res.json(students);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.get("/staff", async (req, res) => {
-  try {
+router.get(
+  "/staff",
+  asyncHandler(async (req, res) => {
     const staff = await listStaff();
     res.json(staff);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.patch("/staff/:userId", async (req, res) => {
-  try {
+router.patch(
+  "/staff/:userId",
+  asyncHandler(async (req, res) => {
+    const { password } = req.body;
+    if (
+      password !== undefined &&
+      (typeof password !== "string" || password.length < 8)
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 8 characters." });
+    }
     const updated = await updateStaffAccount(req.params.userId, req.body);
     res.json(updated);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.delete("/staff/:userId", async (req, res) => {
-  try {
+router.delete(
+  "/staff/:userId",
+  asyncHandler(async (req, res) => {
     await deleteStaffAccount(req.params.userId);
     res.status(204).send();
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.post("/", async (req, res) => {
-  const {
-    email,
-    password,
-    fullName,
-    role,
-    course,
-    agencyId,
-    requiredHours,
-    amStart,
-    amEnd,
-    pmStart,
-    pmEnd,
-    university,
-    batch,
-    ojtStatus,
-    controlNumberId,
-  } = req.body;
+router.post(
+  "/",
+  asyncHandler(async (req, res) => {
+    const {
+      email,
+      password,
+      fullName,
+      role,
+      course,
+      agencyId,
+      requiredHours,
+      amStart,
+      amEnd,
+      pmStart,
+      pmEnd,
+      university,
+      batch,
+      ojtStatus,
+      controlNumberId,
+    } = req.body;
 
-  if (!email || !password || !fullName || !role) {
-    return res
-      .status(400)
-      .json({ error: "email, password, fullName, and role are required." });
-  }
-  if (!["student", "in_charge", "admin"].includes(role)) {
-    return res
-      .status(400)
-      .json({ error: "role must be student, in_charge, or admin." });
-  }
-  if (password.length < 8) {
-    return res
-      .status(400)
-      .json({ error: "Password must be at least 8 characters." });
-  }
-  if (batch && !/^\d{4}-\d{2}$/.test(batch)) {
-    return res.status(400).json({ error: "batch must be in YYYY-MM format." });
-  }
-  if (
-    role === "student" &&
-    requiredHours !== undefined &&
-    requiredHours !== null &&
-    requiredHours !== "" &&
-    (isNaN(Number(requiredHours)) || Number(requiredHours) <= 0)
-  ) {
-    return res
-      .status(400)
-      .json({ error: "requiredHours must be a positive number." });
-  }
+    if (!email || !password || !fullName || !role) {
+      return res
+        .status(400)
+        .json({ error: "email, password, fullName, and role are required." });
+    }
+    if (!["student", "in_charge", "admin"].includes(role)) {
+      return res
+        .status(400)
+        .json({ error: "role must be student, in_charge, or admin." });
+    }
+    if (password.length < 8) {
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 8 characters." });
+    }
+    if (batch) {
+      const batchError = validateBatchField(batch, { required: true });
+      if (batchError) {
+        return res
+          .status(400)
+          .json({ error: "batch must be in YYYY-MM format." });
+      }
+    }
+    if (role === "student") {
+      const hoursError = validateRequiredHoursField(requiredHours);
+      if (
+        requiredHours !== undefined &&
+        requiredHours !== null &&
+        requiredHours !== "" &&
+        hoursError
+      ) {
+        return res
+          .status(400)
+          .json({ error: "requiredHours must be a positive number." });
+      }
+    }
 
-  try {
     const result = await createUser({
       email,
       password,
@@ -127,85 +145,72 @@ router.post("/", async (req, res) => {
       controlNumberId,
     });
     res.status(201).json(result);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.patch("/students/:studentId", async (req, res) => {
-  if (
-    "batch" in req.body &&
-    req.body.batch &&
-    !/^\d{4}-\d{2}$/.test(req.body.batch)
-  ) {
-    return res.status(400).json({ error: "batch must be in YYYY-MM format." });
-  }
-  if (
-    "requiredHours" in req.body &&
-    req.body.requiredHours !== undefined &&
-    req.body.requiredHours !== null &&
-    req.body.requiredHours !== "" &&
-    (isNaN(Number(req.body.requiredHours)) ||
-      Number(req.body.requiredHours) <= 0)
-  ) {
-    return res
-      .status(400)
-      .json({ error: "requiredHours must be a positive number." });
-  }
-  try {
+router.patch(
+  "/students/:studentId",
+  asyncHandler(async (req, res) => {
+    if ("batch" in req.body && req.body.batch) {
+      const batchError = validateBatchField(req.body.batch, { required: true });
+      if (batchError) {
+        return res
+          .status(400)
+          .json({ error: "batch must be in YYYY-MM format." });
+      }
+    }
+    if ("requiredHours" in req.body) {
+      const hoursError = validateRequiredHoursField(req.body.requiredHours);
+      if (
+        req.body.requiredHours !== undefined &&
+        req.body.requiredHours !== null &&
+        req.body.requiredHours !== "" &&
+        hoursError
+      ) {
+        return res
+          .status(400)
+          .json({ error: "requiredHours must be a positive number." });
+      }
+    }
     const updated = await updateStudentProfile(req.params.studentId, req.body);
     res.json(updated);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.delete("/students/:studentId", async (req, res) => {
-  try {
+router.delete(
+  "/students/:studentId",
+  asyncHandler(async (req, res) => {
     await deleteStudent(req.params.studentId);
     res.status(204).send();
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.post("/students/:studentId/approve", async (req, res) => {
-  try {
+router.post(
+  "/students/:studentId/approve",
+  asyncHandler(async (req, res) => {
     const result = await approveStudent(req.params.studentId);
     res.json(result);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.post("/students/:studentId/reject", async (req, res) => {
-  try {
+router.post(
+  "/students/:studentId/reject",
+  asyncHandler(async (req, res) => {
     const result = await rejectStudent(req.params.studentId);
     res.json(result);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
+  }),
+);
 
-router.patch("/:userId/status", async (req, res) => {
-  const { isActive } = req.body;
-  if (typeof isActive !== "boolean") {
-    return res.status(400).json({ error: "isActive (boolean) is required." });
-  }
-  try {
+router.patch(
+  "/:userId/status",
+  asyncHandler(async (req, res) => {
+    const { isActive } = req.body;
+    if (typeof isActive !== "boolean") {
+      return res.status(400).json({ error: "isActive (boolean) is required." });
+    }
     const updated = await setUserActiveStatus(req.params.userId, isActive);
     res.json(updated);
-  } catch (err) {
-    handleError(err, res);
-  }
-});
-
-function handleError(err, res) {
-  if (err instanceof UserError) {
-    return res.status(err.statusCode).json({ error: err.message });
-  }
-  console.error(err);
-  res.status(500).json({ error: "Internal server error." });
-}
+  }),
+);
 
 module.exports = router;

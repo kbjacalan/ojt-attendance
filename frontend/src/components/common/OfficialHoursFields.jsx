@@ -1,4 +1,5 @@
 import { buildOfficialHoursText, validateOfficialHours } from "../../utils/officialHours";
+import TextInput from "./TextInput";
 
 export default function OfficialHoursFields({
   value,
@@ -21,17 +22,17 @@ export default function OfficialHoursFields({
       <label
         className={
           isSpacious
-            ? "block text-sm font-medium text-slate-700 mb-1"
-            : "block text-xs font-medium text-slate-600 mb-1"
+            ? "block text-sm font-medium text-text-primary mb-1"
+            : "block text-xs font-medium text-text-secondary mb-1"
         }
       >
-        Official Hours <span className="text-red-500">*</span>
+        Official Hours <span className="text-error">*</span>
       </label>
       <p
         className={
           isSpacious
-            ? "text-xs text-slate-400 mb-2"
-            : "text-[11px] text-slate-400 mb-2"
+            ? "text-xs text-text-secondary mb-2"
+            : "text-[11px] text-text-secondary mb-2"
         }
       >
         {description}
@@ -67,12 +68,12 @@ export default function OfficialHoursFields({
         />
       </div>
       {preview && (
-        <p className="text-xs text-slate-500 mt-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+        <p className="text-xs text-text-secondary mt-2 bg-bg-secondary border border-border rounded-lg px-3 py-2">
           Preview: {preview}
         </p>
       )}
       {validationError && (
-        <p className="text-xs text-red-600 mt-2">{validationError}</p>
+        <p className="text-xs text-error mt-2">{validationError}</p>
       )}
     </div>
   );
@@ -81,16 +82,15 @@ export default function OfficialHoursFields({
 function TimeField({ label, value, onChange, disabled, required }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-600 mb-1">
+      <label className="block text-xs font-medium text-text-secondary mb-1">
         {label}
       </label>
-      <input
+      <TextInput
         type="time"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         required={required}
-        className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-caap-blue disabled:bg-slate-50 disabled:text-slate-400"
       />
     </div>
   );

@@ -12,20 +12,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import NotificationBadge from "../../components/common/NotificationBadge";
 import { listStudents } from "../../services/adminApi";
-
-function greetingFor(now) {
-  const phHour = parseInt(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Manila",
-      hour: "numeric",
-      hour12: false,
-    }).format(now),
-    10,
-  );
-  if (phHour < 12) return "Good morning";
-  if (phHour < 18) return "Good afternoon";
-  return "Good evening";
-}
+import { greetingFor } from "../../utils/greeting";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -49,101 +36,103 @@ export default function Dashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10">
+    <div className="min-h-screen bg-bg-secondary px-4 py-10">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-slate-900 mb-1">
+        <h1 className="text-2xl font-bold text-text-primary mb-1">
           {greetingFor(new Date())}, {firstName}
         </h1>
-        <p className="text-sm text-slate-500 mb-8">
+        <p className="text-sm text-text-secondary mb-8">
           Here's your admin overview for today.
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Link
             to="/admin/students"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-gradient-to-br from-bg-primary to-brand/5 rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
               <span className="relative inline-flex">
-                <Users className="w-6 h-6 text-caap-blue" />
+                <Users className="w-6 h-6 text-text-primary" />
                 <NotificationBadge count={pendingStudents} />
               </span>
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-text-secondary/40 transition-all duration-200 group-hover:text-text-secondary group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </div>
-            <h2 className="font-semibold text-slate-800">Students</h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <h2 className="font-semibold text-text-primary">Students</h2>
+            <p className="text-sm text-text-secondary mt-1">
               Manage student accounts and agency assignments.
             </p>
           </Link>
 
           <Link
             to="/admin/agencies"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-gradient-to-br from-bg-primary to-brand/5 rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
-              <MapPin className="w-6 h-6 text-caap-blue" />
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              <MapPin className="w-6 h-6 text-text-primary" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-text-secondary/40 transition-all duration-200 group-hover:text-text-secondary group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </div>
-            <h2 className="font-semibold text-slate-800">Agencies</h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <h2 className="font-semibold text-text-primary">Agencies</h2>
+            <p className="text-sm text-text-secondary mt-1">
               Manage host agencies and geofence settings.
             </p>
           </Link>
 
           <Link
             to="/admin/control-numbers"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-gradient-to-br from-bg-primary to-brand/5 rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
-              <Hash className="w-6 h-6 text-caap-blue" />
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              <Hash className="w-6 h-6 text-text-primary" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-text-secondary/40 transition-all duration-200 group-hover:text-text-secondary group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </div>
-            <h2 className="font-semibold text-slate-800">
+            <h2 className="font-semibold text-text-primary">
               OJT Control Numbers
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-text-secondary mt-1">
               Create and manage control numbers for trainees.
             </p>
           </Link>
 
           <Link
             to="/admin/staff"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-gradient-to-br from-bg-primary to-brand/5 rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
-              <UserCog className="w-6 h-6 text-caap-blue" />
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              <UserCog className="w-6 h-6 text-text-primary" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-text-secondary/40 transition-all duration-200 group-hover:text-text-secondary group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </div>
-            <h2 className="font-semibold text-slate-800">In-Charge Accounts</h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <h2 className="font-semibold text-text-primary">
+              In-Charge Accounts
+            </h2>
+            <p className="text-sm text-text-secondary mt-1">
               Manage agency supervisor accounts.
             </p>
           </Link>
 
           <Link
             to="/admin/holidays"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-gradient-to-br from-bg-primary to-brand/5 rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
-              <CalendarDays className="w-6 h-6 text-caap-blue" />
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              <CalendarDays className="w-6 h-6 text-text-primary" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-text-secondary/40 transition-all duration-200 group-hover:text-text-secondary group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </div>
-            <h2 className="font-semibold text-slate-800">Holidays</h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <h2 className="font-semibold text-text-primary">Holidays</h2>
+            <p className="text-sm text-text-secondary mt-1">
               Manage the holiday calendar used in DTR generation.
             </p>
           </Link>
 
           <Link
             to="/admin/account"
-            className="group bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 hover:shadow-md transition-shadow"
+            className="group bg-gradient-to-br from-bg-primary to-brand/5 rounded-2xl border border-border p-5 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between mb-3">
-              <UserCircle className="w-6 h-6 text-caap-blue" />
-              <ArrowUpRight className="w-3.5 h-3.5 text-slate-300 transition-all duration-200 group-hover:text-slate-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              <UserCircle className="w-6 h-6 text-text-primary" />
+              <ArrowUpRight className="w-3.5 h-3.5 text-text-secondary/40 transition-all duration-200 group-hover:text-text-secondary group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
             </div>
-            <h2 className="font-semibold text-slate-800">My Account</h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <h2 className="font-semibold text-text-primary">My Account</h2>
+            <p className="text-sm text-text-secondary mt-1">
               View your account info and change your password.
             </p>
           </Link>

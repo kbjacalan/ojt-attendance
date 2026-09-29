@@ -20,7 +20,7 @@ export function buildOfficialHoursText({ amStart, amEnd, pmStart, pmEnd }) {
   return parts.join("  |  ");
 }
 
-function toMinutes(time24) {
+export function minutesFromHHMM(time24) {
   const [h, m] = time24.split(":").map(Number);
   return h * 60 + m;
 }
@@ -29,13 +29,13 @@ export function validateOfficialHours({ amStart, amEnd, pmStart, pmEnd }) {
   if (!amStart || !amEnd || !pmStart || !pmEnd) {
     return "All four official hours fields are required.";
   }
-  if (toMinutes(amEnd) <= toMinutes(amStart)) {
+  if (minutesFromHHMM(amEnd) <= minutesFromHHMM(amStart)) {
     return "Morning Time Out must be after Morning Time In.";
   }
-  if (toMinutes(pmEnd) <= toMinutes(pmStart)) {
+  if (minutesFromHHMM(pmEnd) <= minutesFromHHMM(pmStart)) {
     return "Afternoon Time Out must be after Afternoon Time In.";
   }
-  if (toMinutes(pmStart) < toMinutes(amEnd)) {
+  if (minutesFromHHMM(pmStart) < minutesFromHHMM(amEnd)) {
     return "Afternoon Time In cannot be before Morning Time Out.";
   }
   return null;

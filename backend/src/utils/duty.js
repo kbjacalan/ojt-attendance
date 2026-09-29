@@ -1,3 +1,5 @@
+const { toManilaTimeString } = require("./month");
+
 /**
  * Computes a student's attendance status from their attendance_logs
  * row for a given day. Shared between the admin and in-charge student
@@ -7,20 +9,12 @@
  * Returns a date-agnostic status — the caller (or frontend) decides
  * how to label it depending on whether the date is today or in the past:
  *   'open_session'  — has a time-in with no matching time-out yet.
- *                      Today: means "currently on duty".
- *                      Past date: means a missed/forgotten time-out.
  *   'completed'     — the afternoon (PM) shift has both a time-in and
  *                      time-out logged, and there's no open session.
- *                      This is the last mandatory shift of the day, so
- *                      the day only counts as done once it's closed out
- *                      — finishing AM alone (e.g. on a lunch break) is
- *                      not enough to be "completed".
- *   'partial'       — at least one punch recorded (e.g. AM finished),
- *                      but the afternoon shift isn't done yet and
- *                      there's no open session right now (on a break
- *                      between shifts).
+ *   'half_day'      — PM fully closed out, no open session, but AM was
+ *                      never punched in at all.
+ *   'partial'       — at least one punch recorded, but PM isn't done yet.
  *   'no_record'     — no attendance row at all for that day.
- *                      Today: "not yet arrived". Past date: "absent".
  */
 function computeDutyStatus(log) {
   if (!log) {
@@ -50,6 +44,7 @@ function computeDutyStatus(log) {
   }
 
   const afternoonComplete = Boolean(log.pm_time_in && log.pm_time_out);
+  const morningStarted = Boolean(log.am_time_in);
 
   // Find the most recent non-null punch, for the "last seen" label
   let lastPunchLabel = null;
@@ -70,25 +65,12 @@ function computeDutyStatus(log) {
 
   let status;
   if (hasOpenSession) status = "open_session";
+  else if (afternoonComplete && !morningStarted) status = "half_day";
   else if (afternoonComplete) status = "completed";
   else if (hasAnyPunch) status = "partial";
   else status = "no_record";
 
   return { status, lastPunchLabel, lastPunchTime };
-}
-
-function toManilaTimeString(date) {
-  const hour = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Manila",
-    hour: "2-digit",
-    hour12: false,
-  }).format(date);
-  const minute = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Manila",
-    minute: "2-digit",
-  }).format(date);
-  const h = hour === "24" ? "00" : hour.padStart(2, "0");
-  return `${h}:${minute.padStart(2, "0")}`;
 }
 
 module.exports = { computeDutyStatus };

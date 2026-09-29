@@ -1,33 +1,19 @@
-import {
-  CircleDot,
-  CheckCircle2,
-  Clock,
-  Coffee,
-  AlertTriangle,
-  XCircle,
-} from "lucide-react";
-
-function to12Hour(time24) {
-  if (!time24) return "";
-  const [hStr, mStr] = time24.split(":");
-  let h = parseInt(hStr, 10);
-  const m = mStr || "00";
-  const period = h >= 12 ? "PM" : "AM";
-  h = h % 12;
-  if (h === 0) h = 12;
-  return `${h}:${m} ${period}`;
-}
+import { to12Hour } from "../../utils/formatTime";
 
 /**
  * Shows a student's attendance status for a given date, computed
  * server-side by utils/duty.js. The same underlying status
- * ('open_session' | 'completed' | 'partial' | 'no_record') is labeled
- * differently depending on whether the date is today or in the past:
+ * ('open_session' | 'completed' | 'half_day' | 'half_day_am' | 'partial'
+ * | 'no_record') is labeled differently depending on whether the date
+ * is today or in the past:
  *
  *   open_session + today      -> "On Duty" (green, currently there)
  *   open_session + past date  -> "Missing Time-Out" (red, likely an error)
  *   completed    + either     -> "Completed" (gray/neutral) — afternoon
  *                                 shift has both a time-in and time-out
+ *   half_day     + either     -> "Half-Day" (blue) — PM done, AM skipped
+ *   half_day_am  + either     -> "Half-Day" (blue) — AM done, PM
+ *                                 window closed without a time-in
  *   partial      + today      -> "On Break" (amber, AM done, PM pending)
  *   partial      + past date  -> "Incomplete" (red, PM was never closed out)
  *   no_record    + today      -> "Not Yet Arrived" (amber)
@@ -41,20 +27,18 @@ export default function DutyStatusBadge({
   align = "left",
 }) {
   const config = getConfig(status, isToday);
-  const Icon = config.icon;
   const alignClasses = align === "right" ? "items-end" : "items-start";
 
   return (
     <div className={`flex flex-col ${alignClasses}`}>
       <span
-        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium border ${config.classes}`}
+        className={`inline-block text-[11px] px-2 py-0.5 rounded-full font-medium border ${config.classes}`}
       >
-        <Icon className="w-3 h-3" />
         {config.label}
       </span>
       {lastPunchLabel && (
         <p
-          className={`text-[11px] text-slate-400 mt-1 ${align === "right" ? "text-right" : ""}`}
+          className={`text-[11px] text-text-secondary mt-1 ${align === "right" ? "text-right" : ""}`}
         >
           {lastPunchLabel} at {to12Hour(lastPunchTime)}
         </p>
@@ -67,46 +51,51 @@ function getConfig(status, isToday) {
   if (status === "open_session") {
     return isToday
       ? {
-          icon: CircleDot,
           label: "On Duty",
-          classes: "bg-emerald-50 text-emerald-700 border-emerald-200",
+          classes: "bg-success-subtle text-success border-success-border",
         }
       : {
-          icon: AlertTriangle,
           label: "Missing Time-Out",
-          classes: "bg-red-50 text-red-700 border-red-200",
+          classes: "bg-error-subtle text-error border-error-border",
         };
   }
   if (status === "completed") {
     return {
-      icon: CheckCircle2,
       label: "Completed",
-      classes: "bg-slate-100 text-slate-600 border-slate-200",
+      classes: "bg-bg-secondary text-text-secondary border-border",
+    };
+  }
+  if (status === "half_day") {
+    return {
+      label: "Half-Day",
+      classes: "bg-info-subtle text-info border-info-border",
+    };
+  }
+  if (status === "half_day_am") {
+    return {
+      label: "Half-Day",
+      classes: "bg-info-subtle text-info border-info-border",
     };
   }
   if (status === "partial") {
     return isToday
       ? {
-          icon: Coffee,
           label: "On Break",
-          classes: "bg-amber-50 text-amber-700 border-amber-200",
+          classes: "bg-warning-subtle text-warning border-warning-border",
         }
       : {
-          icon: AlertTriangle,
           label: "Incomplete",
-          classes: "bg-red-50 text-red-700 border-red-200",
+          classes: "bg-error-subtle text-error border-error-border",
         };
   }
   // no_record
   return isToday
     ? {
-        icon: Clock,
         label: "Not Yet Arrived",
-        classes: "bg-amber-50 text-amber-700 border-amber-200",
+        classes: "bg-warning-subtle text-warning border-warning-border",
       }
     : {
-        icon: XCircle,
         label: "Absent",
-        classes: "bg-red-50 text-red-700 border-red-200",
+        classes: "bg-error-subtle text-error border-error-border",
       };
 }

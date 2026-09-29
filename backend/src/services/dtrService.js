@@ -1,5 +1,10 @@
 const pool = require("../config/db");
 const { getManilaDateString } = require("../utils/time");
+const {
+  getMonthBounds,
+  toManilaTimeString,
+  toHHMM,
+} = require("../utils/month");
 const { buildOfficialHoursText } = require("../utils/officialHours");
 
 class DTRError extends Error {
@@ -42,10 +47,8 @@ async function getMonthlyDTR(studentId, monthStr) {
   const cumulativeHours =
     parseFloat(cumulativeResult.rows[0].cumulative_hours) || 0;
 
+  const { daysInMonth, monthStart, monthEnd } = getMonthBounds(monthStr);
   const [year, month] = monthStr.split("-").map(Number);
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const monthStart = `${monthStr}-01`;
-  const monthEnd = `${monthStr}-${String(daysInMonth).padStart(2, "0")}`;
 
   const logsResult = await pool.query(
     `SELECT log_date, status, am_time_in, am_time_out, pm_time_in, pm_time_out,
@@ -98,12 +101,12 @@ async function getMonthlyDTR(studentId, monthStr) {
       days.push({
         day: d,
         status: log.status,
-        amIn: toTimeString(log.am_time_in),
-        amOut: toTimeString(log.am_time_out),
-        pmIn: toTimeString(log.pm_time_in),
-        pmOut: toTimeString(log.pm_time_out),
-        otIn: toTimeString(log.ot_time_in),
-        otOut: toTimeString(log.ot_time_out),
+        amIn: toManilaTimeString(log.am_time_in),
+        amOut: toManilaTimeString(log.am_time_out),
+        pmIn: toManilaTimeString(log.pm_time_in),
+        pmOut: toManilaTimeString(log.pm_time_out),
+        otIn: toManilaTimeString(log.ot_time_in),
+        otOut: toManilaTimeString(log.ot_time_out),
         totalHours,
         certifiedBy: log.certified_by || "",
         remarks: log.remarks || "",
@@ -163,28 +166,6 @@ async function getMonthlyDTR(studentId, monthStr) {
           totalHours: null,
         },
   };
-}
-
-function toHHMM(time) {
-  if (!time) return "";
-  return time.slice(0, 5);
-}
-
-function toTimeString(timestamp) {
-  if (!timestamp) return "";
-  const date = new Date(timestamp);
-  const hour = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Manila",
-    hour: "2-digit",
-    hour12: false,
-  }).format(date);
-  const minute = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Manila",
-    minute: "2-digit",
-  }).format(date);
-  const h = hour === "24" ? "00" : hour.padStart(2, "0");
-  const m = minute.padStart(2, "0");
-  return `${h}:${m}`;
 }
 
 function formatMonthLabel(monthStr) {
