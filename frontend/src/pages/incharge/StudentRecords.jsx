@@ -11,6 +11,7 @@ import {
   Search,
   X,
   FunnelX,
+  Timer,
 } from "lucide-react";
 import {
   listMyStudents,
@@ -308,33 +309,41 @@ export default function StudentRecords() {
             </p>
           </div>
 
-          <div className="flex items-center gap-1 min-w-0">
+          <div className="flex w-full md:w-auto items-center gap-1 min-w-0">
             <button
+              type="button"
               onClick={() => shiftDate(-1)}
-              className="p-1.5 rounded hover:bg-bg-secondary shrink-0"
+              aria-label="Previous day"
+              title="Previous day"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-secondary transition-colors hover:border-border-hover hover:bg-bg-secondary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <div className="flex items-center gap-1.5 text-sm min-w-0 flex-1">
+            <div className="min-w-0 flex-1 md:flex-none text-sm">
               <TextInput
                 type="date"
                 value={selectedDate}
                 max={today}
+                aria-label="Select date"
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="min-w-[100px]"
+                className="min-w-0 w-full md:w-[150px] tabular-nums text-text-primary"
               />
             </div>
             <button
+              type="button"
               onClick={() => shiftDate(1)}
               disabled={isToday}
-              className="p-1.5 rounded hover:bg-bg-secondary disabled:hover:bg-transparent disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+              aria-label="Next day"
+              title="Next day"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-secondary transition-colors hover:border-border-hover hover:bg-bg-secondary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-transparent disabled:hover:bg-transparent"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
             {!isToday && (
               <button
+                type="button"
                 onClick={() => setSelectedDate(today)}
-                className="text-xs text-text-primary hover:underline underline-offset-2 shrink-0 whitespace-nowrap"
+                className="shrink-0 whitespace-nowrap rounded-lg border border-border bg-bg-primary px-2.5 py-2 text-xs font-medium text-text-secondary transition-colors hover:border-border-hover hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30"
               >
                 Today
               </button>
@@ -348,25 +357,30 @@ export default function StudentRecords() {
           </div>
         )}
 
-        <div className="flex items-center gap-2 mb-4 overflow-x-auto flex-nowrap [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center gap-2 mb-4">
           <Link
             to="/incharge/ot-requests"
-            className={`inline-flex items-center shrink-0 gap-1.5 rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors hover:underline underline-offset-2 ${
-              pendingOtCount > 0
-                ? "bg-warning-subtle text-warning"
-                : "bg-bg-secondary text-text-secondary"
-            }`}
+            aria-label={`Overtime Requests, ${pendingOtCount} pending`}
+            className="group inline-flex w-full items-center gap-2.5 rounded-xl border border-border bg-bg-primary px-3.5 py-2 text-xs sm:text-sm font-medium text-text-primary shadow-card transition-colors hover:border-border-hover hover:bg-bg-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30"
           >
-            Overtime Requests
             <span
-              className={`inline-flex items-center justify-center min-w-[16px] sm:min-w-[18px] h-[16px] sm:h-[18px] px-1 rounded-full text-[9px] sm:text-[10px] font-semibold leading-none ${
-                pendingOtCount > 0
-                  ? "bg-amber-400 text-amber-900"
-                  : "bg-slate-200 text-text-secondary"
-              }`}
+              aria-hidden="true"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-text-primary ring-1 ring-border"
             >
-              {pendingOtCount}
+              <Timer className="h-4 w-4" />
             </span>
+            <span className="min-w-0 flex-1">
+              Overtime Requests
+              <span className="block text-[11px] font-normal text-text-secondary">
+                Review today&apos;s requests
+              </span>
+            </span>
+            {pendingOtCount > 0 && (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-semibold leading-none text-text-inverse tabular-nums">
+                {pendingOtCount}
+              </span>
+            )}
+            <ChevronRight className="h-4 w-4 shrink-0 text-text-secondary transition-transform group-hover:translate-x-0.5 group-hover:text-text-primary" />
           </Link>
         </div>
 

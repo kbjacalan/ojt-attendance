@@ -200,8 +200,7 @@ export default function AttendanceMap({
           <div className="px-4 pt-4">
             <div className="mx-auto w-full max-w-sm">
               {agencyError ? (
-                <div className="flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-center text-sm font-medium shadow-md border bg-error-subtle/95 text-error border-error-border">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <div className="flex items-center justify-center rounded-full px-4 py-2 text-center text-sm font-medium shadow-md border bg-error-subtle/95 text-error border-error-border">
                   You&apos;re not assigned to an agency yet
                 </div>
               ) : geofence ? (

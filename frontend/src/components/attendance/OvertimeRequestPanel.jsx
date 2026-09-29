@@ -19,16 +19,12 @@ const STATUS_CONFIG = {
   pending: {
     icon: Hourglass,
     title: "Waiting for approval",
-    label: "Pending",
     tile: "bg-warning-subtle text-warning ring-warning-border",
-    pill: "border-warning-border bg-warning-subtle text-warning",
   },
   approved: {
     icon: CheckCircle2,
     title: "Overtime approved",
-    label: "Approved",
     tile: "bg-success-subtle text-success ring-success-border",
-    pill: "border-success-border bg-success-subtle text-success",
   },
   rejected: {
     icon: XCircle,
@@ -123,16 +119,9 @@ function StatusCard({ request, cancelling, error, onCancel }) {
       <div className="flex items-start gap-3">
         <IconTile icon={config.icon} className={config.tile} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <h3 className="text-sm font-semibold text-text-primary">
-              {config.title}
-            </h3>
-            <span
-              className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-medium ${config.pill}`}
-            >
-              {config.label}
-            </span>
-          </div>
+          <h3 className="text-sm font-semibold text-text-primary">
+            {config.title}
+          </h3>
           <p className="mt-1 text-base font-semibold tabular-nums text-text-primary">
             {formatRange(start, end)}
           </p>

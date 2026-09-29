@@ -1,11 +1,6 @@
 const pool = require("../config/db");
 const { isWithinGeofence } = require("../utils/geo");
-const {
-  getManilaDateString,
-  getManilaMinutesSinceMidnight,
-  hoursBetween,
-} = require("../utils/time");
-const { to12Hour } = require("../utils/officialHours");
+const { getManilaDateString, hoursBetween } = require("../utils/time");
 const { syncOjtStatus } = require("./userService");
 const { getTodayRequest } = require("./otRequestService");
 
@@ -86,6 +81,8 @@ function requireCompleteSchedule(agency) {
 /**
  * Overtime has no fixed daily schedule — it requires an approved
  * ot_requests row for today before a student can time in or out.
+ * The approved window is returned for display only; punches are
+ * allowed anytime once approved.
  */
 async function requireApprovedOvertimeWindow(studentId) {
   const request = await getTodayRequest(studentId);
@@ -102,29 +99,9 @@ async function requireApprovedOvertimeWindow(studentId) {
   };
 }
 
-function minutesFromHHMM(str) {
-  const [hour, minute] = str.split(":").map((part) => parseInt(part, 10));
-  return hour * 60 + minute;
-}
-
-function requireWithinOvertimeWindow(window) {
-  const nowMinutes = getManilaMinutesSinceMidnight();
-  const startMinutes = minutesFromHHMM(window.otStart);
-  const endMinutes = minutesFromHHMM(window.otEnd);
-  if (nowMinutes < startMinutes || nowMinutes > endMinutes) {
-    throw new AttendanceError(
-      `Overtime punches are only allowed between ${to12Hour(window.otStart)} and ${to12Hour(window.otEnd)}, per your approved request.`,
-      409,
-      "OT_OUTSIDE_WINDOW",
-    );
-  }
-}
-
 async function resolveScheduleForPeriod(period, agency, studentId) {
   if (period === "overtime") {
-    const window = await requireApprovedOvertimeWindow(studentId);
-    requireWithinOvertimeWindow(window);
-    return window;
+    return requireApprovedOvertimeWindow(studentId);
   }
   return requireCompleteSchedule(agency);
 }
@@ -225,7 +202,10 @@ async function persistPunch({
   let paramIndex = 2;
 
   if (latColumn && lngColumn) {
-    setClauses.push(`${latColumn} = $${paramIndex++}`, `${lngColumn} = $${paramIndex++}`);
+    setClauses.push(
+      `${latColumn} = $${paramIndex++}`,
+      `${lngColumn} = $${paramIndex++}`,
+    );
     values.push(latitude, longitude);
   }
 
@@ -458,7 +438,9 @@ async function correctAttendanceLog({
     ot_time_in:
       "otIn" in times ? manilaTimeToDate(dateStr, times.otIn) : log.ot_time_in,
     ot_time_out:
-      "otOut" in times ? manilaTimeToDate(dateStr, times.otOut) : log.ot_time_out,
+      "otOut" in times
+        ? manilaTimeToDate(dateStr, times.otOut)
+        : log.ot_time_out,
   };
 
   requireValidTimeOrder(updatedTimes);

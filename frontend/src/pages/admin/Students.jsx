@@ -415,33 +415,41 @@ export default function Students() {
           </div>
 
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1 min-w-0 flex-1">
+            <div className="flex items-center gap-1 min-w-0 flex-1 md:flex-none">
               <button
+                type="button"
                 onClick={() => shiftDate(-1)}
-                className="p-1.5 rounded hover:bg-bg-secondary shrink-0"
+                aria-label="Previous day"
+                title="Previous day"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-secondary transition-colors hover:border-border-hover hover:bg-bg-secondary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <div className="flex items-center gap-1.5 text-sm min-w-0 flex-1">
+              <div className="min-w-0 flex-1 md:flex-none text-sm">
                 <TextInput
                   type="date"
                   value={selectedDate}
                   max={today}
+                  aria-label="Select date"
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="min-w-[100px]"
+                  className="min-w-0 w-full md:w-[150px] tabular-nums text-text-primary"
                 />
               </div>
               <button
+                type="button"
                 onClick={() => shiftDate(1)}
                 disabled={isToday}
-                className="p-1.5 rounded hover:bg-bg-secondary disabled:hover:bg-transparent disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                aria-label="Next day"
+                title="Next day"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-transparent text-text-secondary transition-colors hover:border-border-hover hover:bg-bg-secondary hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:border-transparent disabled:hover:bg-transparent"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
               {!isToday && (
                 <button
+                  type="button"
                   onClick={() => setSelectedDate(today)}
-                  className="text-xs text-text-primary hover:underline underline-offset-2 shrink-0 whitespace-nowrap"
+                  className="shrink-0 whitespace-nowrap rounded-lg border border-border bg-bg-primary px-2.5 py-2 text-xs font-medium text-text-secondary transition-colors hover:border-border-hover hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-focus/30"
                 >
                   Today
                 </button>
