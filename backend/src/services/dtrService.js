@@ -174,4 +174,23 @@ function formatMonthLabel(monthStr) {
   return date.toLocaleString("en-US", { month: "long", year: "numeric" });
 }
 
-module.exports = { getMonthlyDTR, DTRError };
+/**
+ * Lists months (YYYY-MM, newest first) where the student has at least
+ * one punch time recorded. Used to bound DTR month pickers so users
+ * only see months with actual records.
+ */
+async function getPunchedMonths(studentId) {
+  const { rows } = await pool.query(
+    `SELECT DISTINCT to_char(log_date, 'YYYY-MM') AS month
+     FROM attendance_logs
+     WHERE student_id = $1
+       AND (am_time_in IS NOT NULL OR am_time_out IS NOT NULL
+         OR pm_time_in IS NOT NULL OR pm_time_out IS NOT NULL
+         OR ot_time_in IS NOT NULL OR ot_time_out IS NOT NULL)
+     ORDER BY month DESC`,
+    [studentId],
+  );
+  return rows.map((row) => row.month);
+}
+
+module.exports = { getMonthlyDTR, getPunchedMonths, DTRError };

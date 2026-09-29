@@ -3,39 +3,75 @@ import { useParams, useSearchParams } from "react-router-dom";
 import BackButton from "../../components/common/BackButton";
 import {
   LoaderCircle,
-  ChevronLeft,
-  ChevronRight,
   CheckCircle2,
   Printer,
   Lock,
   MessageSquare,
 } from "lucide-react";
-import { getStudentDTR, correctAttendance } from "../../services/adminApi";
+import {
+  getStudentDTR,
+  getStudentDTRMonths,
+  correctAttendance,
+} from "../../services/adminApi";
 import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
 import bagongPilipinasLogo from "../../assets/bagong_pilipinas_logo.png";
 import { to12Hour, to12HourNoSuffix } from "../../utils/formatTime";
-import { getCurrentMonthValue, shiftMonthValue } from "../../utils/month";
+import DTRMonthPicker from "../../components/dtr/DTRMonthPicker";
 import RemarksModal from "../../components/dtr/DTRRemarksModal";
 import TextInput from "../../components/common/TextInput";
 import TextArea from "../../components/common/TextArea";
 
 export default function StudentDTRReview() {
   const { studentId } = useParams();
-  const currentMonth = getCurrentMonthValue();
   const [searchParams, setSearchParams] = useSearchParams();
-  const month = searchParams.get("month") || currentMonth;
+  const month = searchParams.get("month") || null;
+  const [months, setMonths] = useState([]);
+  const [monthsLoading, setMonthsLoading] = useState(true);
   const [dtr, setDtr] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [viewingRemarks, setViewingRemarks] = useState(null);
   const [editingDay, setEditingDay] = useState(null); // the row object being corrected, or null
 
   useEffect(() => {
-    loadDTR(month);
+    let cancelled = false;
+    async function loadMonths() {
+      setMonthsLoading(true);
+      try {
+        const list = await getStudentDTRMonths(studentId);
+        if (cancelled) return;
+        setMonths(list);
+        const current = searchParams.get("month");
+        if (list.length === 0) {
+          if (current) {
+            const next = new URLSearchParams(searchParams);
+            next.delete("month");
+            setSearchParams(next, { replace: true });
+          }
+        } else if (!current || !list.includes(current)) {
+          const next = new URLSearchParams(searchParams);
+          next.set("month", list[0]);
+          setSearchParams(next, { replace: true });
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setMonthsLoading(false);
+      }
+    }
+    loadMonths();
+    return () => {
+      cancelled = true;
+    };
+  }, [studentId]);
+
+  useEffect(() => {
+    if (month) loadDTR(month);
   }, [month, studentId]);
 
   async function loadDTR(m) {
+    if (!m) return;
     setLoading(true);
     setError(null);
     try {
@@ -52,16 +88,11 @@ export default function StudentDTRReview() {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (value === currentMonth) next.delete("month");
-        else next.set("month", value);
+        next.set("month", value);
         return next;
       },
       { replace: true },
     );
-  }
-
-  function shiftMonth(delta) {
-    setMonth(shiftMonthValue(month, delta));
   }
 
   const isCertified = dtr?.certification?.status === "certified";
@@ -72,23 +103,9 @@ export default function StudentDTRReview() {
         <BackButton fallbackTo="/admin/students" label="Back to Students" />
 
         <div className="flex items-center justify-between gap-2 sm:justify-end">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => shiftMonth(-1)}
-              className="p-1.5 rounded hover:bg-bg-secondary"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm font-medium text-text-primary min-w-[90px] sm:min-w-[110px] text-center">
-              {dtr?.student?.month || month}
-            </span>
-            <button
-              onClick={() => shiftMonth(1)}
-              className="p-1.5 rounded hover:bg-bg-secondary"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+          {months.length > 0 && month && (
+            <DTRMonthPicker months={months} value={month} onChange={setMonth} />
+          )}
 
           <button
             onClick={() => window.print()}
@@ -100,7 +117,7 @@ export default function StudentDTRReview() {
         </div>
       </div>
 
-      {loading && (
+      {(loading || monthsLoading) && (
         <div className="flex justify-center py-16 text-text-secondary">
           <LoaderCircle className="w-6 h-6 animate-spin" />
         </div>
@@ -112,7 +129,13 @@ export default function StudentDTRReview() {
         </div>
       )}
 
-      {!loading && dtr && (
+      {!monthsLoading && !error && months.length === 0 && (
+        <div className="max-w-3xl mx-auto rounded-2xl border border-border bg-bg-primary p-8 text-center text-sm text-text-secondary shadow-card">
+          <p>This student has no punched records yet.</p>
+        </div>
+      )}
+
+      {!loading && !monthsLoading && dtr && month && (
         <ResponsiveDocument className="max-w-3xl mx-auto">
           <div className="bg-bg-primary shadow-sm border border-border rounded-lg p-8 print:p-0 print:shadow-none print:border-none">
             {isCertified ? (

@@ -79,6 +79,11 @@ export const deleteHoliday = (id) =>
 export const getStudentDTR = (studentId, month) =>
   request(`/dtr/student/${studentId}?month=${month}`);
 
+export const getStudentDTRMonths = async (studentId) => {
+  const data = await request(`/dtr/student/${studentId}/months`);
+  return data.months ?? [];
+};
+
 export const correctAttendance = (studentId, dateStr, times, remarks) =>
   request(`/attendance/${studentId}/${dateStr}`, {
     method: "PATCH",

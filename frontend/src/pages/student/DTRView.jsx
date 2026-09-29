@@ -1,35 +1,50 @@
 import { useState, useEffect } from "react";
-import {
-  Printer,
-  LoaderCircle,
-  ChevronLeft,
-  ChevronRight,
-  MessageSquare,
-} from "lucide-react";
+import { Printer, LoaderCircle, MessageSquare } from "lucide-react";
 import BackButton from "../../components/common/BackButton";
-import { getMyDTR } from "../../services/dtrApi";
+import { getMyDTR, getMyDTRMonths } from "../../services/dtrApi";
+import DTRMonthPicker from "../../components/dtr/DTRMonthPicker";
 import ResponsiveDocument from "../../components/document/ResponsiveDocument";
 import caapLogo from "../../assets/caap_logo.png";
 import bagongPilipinasLogo from "../../assets/bagong_pilipinas_logo.png";
 import { to12Hour, to12HourNoSuffix } from "../../utils/formatTime";
-import {
-  getCurrentMonthValue,
-  shiftMonthValue,
-} from "../../utils/month";
 import RemarksModal from "../../components/dtr/DTRRemarksModal";
 
 export default function DTRView() {
-  const [month, setMonth] = useState(getCurrentMonthValue());
+  const [months, setMonths] = useState([]);
+  const [month, setMonth] = useState(null);
+  const [monthsLoading, setMonthsLoading] = useState(true);
   const [viewingRemarks, setViewingRemarks] = useState(null);
   const [dtr, setDtr] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadDTR(month);
+    let cancelled = false;
+    async function loadMonths() {
+      setMonthsLoading(true);
+      try {
+        const list = await getMyDTRMonths();
+        if (cancelled) return;
+        setMonths(list);
+        setMonth(list[0] ?? null);
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setMonthsLoading(false);
+      }
+    }
+    loadMonths();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (month) loadDTR(month);
   }, [month]);
 
   async function loadDTR(m) {
+    if (!m) return;
     setLoading(true);
     setError(null);
     try {
@@ -42,46 +57,28 @@ export default function DTRView() {
     }
   }
 
-  function shiftMonth(delta) {
-    setMonth(shiftMonthValue(month, delta));
-  }
-
   return (
     <div className="min-h-screen bg-bg-secondary py-8 px-4 print:p-0">
       {/* Toolbar — hidden when printing */}
       <div className="max-w-3xl mx-auto mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <BackButton fallbackTo="/attendance" label="Back to Attendance" />
 
-        <div className="flex items-center justify-between gap-2 sm:justify-end">
-          <div className="flex items-center gap-1">
+        {months.length > 0 && month && (
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
+            <DTRMonthPicker months={months} value={month} onChange={setMonth} />
+
             <button
-              onClick={() => shiftMonth(-1)}
-              className="p-1.5 rounded hover:bg-bg-secondary"
+              onClick={() => window.print()}
+              disabled={!dtr}
+              className="flex items-center gap-2 bg-brand text-text-inverse px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3"
             >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm font-medium text-text-primary min-w-[90px] sm:min-w-[110px] text-center">
-              {dtr?.student?.month || month}
-            </span>
-            <button
-              onClick={() => shiftMonth(1)}
-              className="p-1.5 rounded hover:bg-bg-secondary"
-            >
-              <ChevronRight className="w-4 h-4" />
+              <Printer className="w-4 h-4" /> Print
             </button>
           </div>
-
-          <button
-            onClick={() => window.print()}
-            disabled={!dtr}
-            className="flex items-center gap-2 bg-brand text-text-inverse px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3"
-          >
-            <Printer className="w-4 h-4" /> Print
-          </button>
-        </div>
+        )}
       </div>
 
-      {loading && (
+      {(loading || monthsLoading) && (
         <div className="flex justify-center py-16 text-text-secondary">
           <LoaderCircle className="w-6 h-6 animate-spin" />
         </div>
@@ -93,7 +90,16 @@ export default function DTRView() {
         </div>
       )}
 
-      {!loading && dtr && (
+      {!monthsLoading && !error && months.length === 0 && (
+        <div className="max-w-3xl mx-auto rounded-2xl border border-border bg-bg-primary p-8 text-center text-sm text-text-secondary shadow-card">
+          <p>No punched records yet.</p>
+          <p className="mt-1 text-xs">
+            Your DTR will appear here after your first time in.
+          </p>
+        </div>
+      )}
+
+      {!loading && !monthsLoading && dtr && month && (
         <ResponsiveDocument className="max-w-3xl mx-auto">
           <div className="bg-bg-primary shadow-sm border border-border rounded-lg p-8 print:p-0 print:shadow-none print:border-none">
             {/* Header */}

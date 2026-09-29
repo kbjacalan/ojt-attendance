@@ -5,9 +5,11 @@ const { asyncHandler } = require("../middleware/errorHandler");
 const {
   listMyStudents,
   getStudentDTRForReview,
+  assertStudentBelongsToInCharge,
   certifyDTR,
   uncertifyDTR,
 } = require("../services/inChargeService");
+const { getPunchedMonths } = require("../services/dtrService");
 const {
   listPendingForInCharge,
   approveRequest,
@@ -32,6 +34,16 @@ router.get(
     }
     const students = await listMyStudents(req.user.userId, date);
     res.json(students);
+  }),
+);
+
+// GET /api/incharge/students/:studentId/dtr/months — punched months for review
+router.get(
+  "/students/:studentId/dtr/months",
+  asyncHandler(async (req, res) => {
+    await assertStudentBelongsToInCharge(req.params.studentId, req.user.userId);
+    const months = await getPunchedMonths(req.params.studentId);
+    res.json({ months });
   }),
 );
 

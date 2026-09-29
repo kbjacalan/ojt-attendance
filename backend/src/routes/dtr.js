@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { authenticate, requireRole } = require("../middleware/authenticate");
 const { asyncHandler } = require("../middleware/errorHandler");
-const { getMonthlyDTR } = require("../services/dtrService");
+const { getMonthlyDTR, getPunchedMonths } = require("../services/dtrService");
 const { getCurrentMonthStr } = require("../utils/month");
 
 /**
@@ -18,6 +18,35 @@ router.get(
     const month = req.query.month || getCurrentMonthStr();
     const dtr = await getMonthlyDTR(req.user.studentId, month);
     res.json(dtr);
+  }),
+);
+
+/**
+ * GET /api/dtr/months
+ * Lists months (YYYY-MM, newest first) where the logged-in student
+ * has at least one punch record. Used to bound DTR month pickers.
+ */
+router.get(
+  "/months",
+  authenticate,
+  requireRole("student"),
+  asyncHandler(async (req, res) => {
+    const months = await getPunchedMonths(req.user.studentId);
+    res.json({ months });
+  }),
+);
+
+/**
+ * GET /api/dtr/student/:studentId/months
+ * Lists punched months for any student (admin review).
+ */
+router.get(
+  "/student/:studentId/months",
+  authenticate,
+  requireRole("admin"),
+  asyncHandler(async (req, res) => {
+    const months = await getPunchedMonths(req.params.studentId);
+    res.json({ months });
   }),
 );
 

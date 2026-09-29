@@ -6,6 +6,11 @@ export const listMyStudents = (date) =>
 export const getStudentDTR = (studentId, month) =>
   request(`/incharge/students/${studentId}/dtr?month=${month}`);
 
+export const getStudentDTRMonths = async (studentId) => {
+  const data = await request(`/incharge/students/${studentId}/dtr/months`);
+  return data.months ?? [];
+};
+
 export const certifyDTR = (studentId, month, signature) =>
   request(`/incharge/students/${studentId}/certify`, {
     method: "POST",
