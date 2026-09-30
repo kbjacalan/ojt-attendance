@@ -167,7 +167,7 @@ export default function AttendanceMap({
     <div className="attendance-map relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
 
-      {!agencyLoading && !agencyError && (
+      {!agencyLoading && (
         <button
           onClick={recenter}
           className="absolute bottom-[var(--attendance-control-clearance)] left-4 z-[1000] bg-bg-primary rounded-full shadow-md p-2.5 text-text-primary hover:bg-bg-secondary active:scale-95 transition-transform"
