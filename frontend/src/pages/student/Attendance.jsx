@@ -219,7 +219,7 @@ export default function Attendance() {
                 />
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-border bg-bg-secondary p-3">
                   <span
                     aria-hidden="true"

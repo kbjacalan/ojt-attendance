@@ -71,7 +71,7 @@ export default function Navbar() {
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               aria-label="Open profile menu"
-              className="flex items-center gap-2 rounded-lg px-2 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-inverse"
+              className="flex items-center gap-2 rounded-lg"
             >
               <span className="hidden min-w-0 text-right leading-tight sm:block">
                 <span className="block max-w-40 truncate text-xs font-medium">

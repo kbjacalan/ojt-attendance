@@ -153,39 +153,43 @@ export default function StudentDTRReview() {
       <div className="max-w-3xl mx-auto mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <BackButton fallbackTo="/incharge/records" label="Back to Students" />
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {months.length > 0 && month && (
-            <DTRMonthPicker months={months} value={month} onChange={setMonth} />
-          )}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-row items-center justify-between gap-2">
+            {months.length > 0 && month && (
+              <DTRMonthPicker
+                months={months}
+                value={month}
+                onChange={setMonth}
+              />
+            )}
 
-          <div className="flex items-center gap-2 sm:ml-3">
             <button
               onClick={() => window.print()}
               disabled={!dtr}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-brand text-text-inverse px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex shrink-0 items-center justify-center gap-2 bg-brand text-text-inverse px-3 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Printer className="w-4 h-4" /> Print
             </button>
-
-            {isCertified ? (
-              <button
-                onClick={() => setShowUncertifyConfirm(true)}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-bg-primary border border-border text-text-primary px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-bg-secondary"
-              >
-                <XCircle className="w-4 h-4" /> Uncertify
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowCertifyModal(true)}
-                disabled={!dtr || certifying || !hoursMet}
-                title={certifyDisabledReason || undefined}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gold text-text-primary px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gold-hover disabled:hover:bg-gold disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                {certifying ? "Certifying…" : "Certify"}
-              </button>
-            )}
           </div>
+
+          {isCertified ? (
+            <button
+              onClick={() => setShowUncertifyConfirm(true)}
+              className="flex w-full items-center justify-center gap-2 bg-bg-primary border border-border text-text-primary px-3 py-2 rounded-lg text-sm font-medium hover:bg-bg-secondary sm:w-auto"
+            >
+              <XCircle className="w-4 h-4" /> Uncertify
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowCertifyModal(true)}
+              disabled={!dtr || certifying || !hoursMet}
+              title={certifyDisabledReason || undefined}
+              className="flex w-full items-center justify-center gap-2 bg-gold text-text-primary px-3 py-2 rounded-lg text-sm font-semibold hover:bg-gold-hover disabled:hover:bg-gold disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              {certifying ? "Certifying…" : "Certify"}
+            </button>
+          )}
         </div>
       </div>
 

@@ -102,7 +102,7 @@ export default function StudentDTRReview() {
       <div className="max-w-3xl mx-auto mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden">
         <BackButton fallbackTo="/admin/students" label="Back to Students" />
 
-        <div className="flex items-center justify-between gap-2 sm:justify-end">
+        <div className="flex flex-row items-center justify-between gap-2">
           {months.length > 0 && month && (
             <DTRMonthPicker months={months} value={month} onChange={setMonth} />
           )}
@@ -110,7 +110,7 @@ export default function StudentDTRReview() {
           <button
             onClick={() => window.print()}
             disabled={!dtr}
-            className="flex items-center gap-2 bg-brand text-text-inverse px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3"
+            className="flex shrink-0 items-center justify-center gap-2 bg-brand text-text-inverse px-3 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Printer className="w-4 h-4" /> Print
           </button>

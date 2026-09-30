@@ -22,7 +22,7 @@ export default function DTRMonthPicker({ months, value, onChange }) {
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex min-w-0 flex-1 items-center gap-1 sm:w-auto sm:flex-none">
       <label htmlFor="dtr-month" className="sr-only">
         Select month
       </label>
@@ -41,7 +41,7 @@ export default function DTRMonthPicker({ months, value, onChange }) {
         size="sm"
         value={value ?? ""}
         onChange={onChange}
-        className="w-44"
+        className="min-w-0 flex-1 sm:w-44 sm:flex-none"
         options={months.map((m) => ({
           value: m,
           label: formatPunchedMonthLabel(m),

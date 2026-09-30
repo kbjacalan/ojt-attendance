@@ -318,7 +318,7 @@ export default function TimeInOutButton({
             Attendance
           </h2>
           <p className="text-xs text-text-secondary">
-            Be within your agency premises to time in or out.
+            Be within your agency premises.
           </p>
         </div>
       </div>

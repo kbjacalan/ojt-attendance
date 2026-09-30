@@ -64,13 +64,13 @@ export default function DTRView() {
         <BackButton fallbackTo="/attendance" label="Back to Attendance" />
 
         {months.length > 0 && month && (
-          <div className="flex items-center justify-between gap-2 sm:justify-end">
+          <div className="flex flex-row items-center justify-between gap-2">
             <DTRMonthPicker months={months} value={month} onChange={setMonth} />
 
             <button
               onClick={() => window.print()}
               disabled={!dtr}
-              className="flex items-center gap-2 bg-brand text-text-inverse px-3 sm:px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3"
+              className="flex shrink-0 items-center justify-center gap-2 bg-brand text-text-inverse px-3 py-2 rounded-lg text-sm font-medium hover:bg-brand-hover disabled:hover:bg-brand disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Printer className="w-4 h-4" /> Print
             </button>
